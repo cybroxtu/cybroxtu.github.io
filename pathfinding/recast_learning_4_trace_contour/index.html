@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"cybroxtu.github.io","root":"/","scheme":"Mist","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"always","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="序本文根据 Sample_SoloMesh::handleBuild 中的 Step 5. Trace and simplify region contours 进行源码解析。 前面已经将高度场内的 span 都划分和标记了区域，这一步就是要给区域描边，确定出轮廓线条。同时也将后续处理的重点，从体素转移到顶点和线段上。 rcBuildContours这一步通过函数 rcBuildContours">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Recast 学习记录之四：构建轮廓">
+<meta property="og:url" content="https://cybroxtu.github.io/pathfinding/recast_learning_4_trace_contour/index.html">
+<meta property="og:site_name" content="Cybroxtu&#39;s Personal Blog">
+<meta property="og:description" content="序本文根据 Sample_SoloMesh::handleBuild 中的 Step 5. Trace and simplify region contours 进行源码解析。 前面已经将高度场内的 span 都划分和标记了区域，这一步就是要给区域描边，确定出轮廓线条。同时也将后续处理的重点，从体素转移到顶点和线段上。 rcBuildContours这一步通过函数 rcBuildContours">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://cybroxtu.github.io/pathfinding/recast_learning_4_trace_contour/walkContour_1.png">
+<meta property="og:image" content="https://cybroxtu.github.io/pathfinding/recast_learning_4_trace_contour/walkContour_2.png">
+<meta property="og:image" content="https://cybroxtu.github.io/pathfinding/recast_learning_4_trace_contour/hole.png">
+<meta property="og:image" content="https://cybroxtu.github.io/pathfinding/recast_learning_4_trace_contour/simplify_contour_1.png">
+<meta property="og:image" content="https://cybroxtu.github.io/pathfinding/recast_learning_4_trace_contour/simplify_contour_2.png">
+<meta property="og:image" content="https://cybroxtu.github.io/pathfinding/recast_learning_4_trace_contour/raw_contour.png">
+<meta property="og:image" content="https://cybroxtu.github.io/pathfinding/recast_learning_4_trace_contour/simplified_contour.png">
+<meta property="og:image" content="https://cybroxtu.github.io/pathfinding/recast_learning_4_trace_contour/both_contour.png">
+<meta property="og:image" content="https://cybroxtu.github.io/pathfinding/recast_learning_4_trace_contour/merge_hole_1.png">
+<meta property="og:image" content="https://cybroxtu.github.io/pathfinding/recast_learning_4_trace_contour/merge_hole_2.png">
+<meta property="og:image" content="https://cybroxtu.github.io/pathfinding/recast_learning_4_trace_contour/merge_hole_3.png">
+<meta property="article:published_time" content="2021-04-07T16:00:00.000Z">
+<meta property="article:modified_time" content="2021-04-08T16:54:52.213Z">
+<meta property="article:author" content="Cybroxtu">
+<meta property="article:tag" content="recastnavigation">
+<meta property="article:tag" content="recast">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://cybroxtu.github.io/pathfinding/recast_learning_4_trace_contour/walkContour_1.png">
+
+<link rel="canonical" href="https://cybroxtu.github.io/pathfinding/recast_learning_4_trace_contour/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-cn'
+  };
+</script>
+
+  <title>Recast 学习记录之四：构建轮廓 | Cybroxtu's Personal Blog</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">Cybroxtu's Personal Blog</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-cn">
+    <link itemprop="mainEntityOfPage" href="https://cybroxtu.github.io/pathfinding/recast_learning_4_trace_contour/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="https://avatars.githubusercontent.com/u/77186652?v=4">
+      <meta itemprop="name" content="Cybroxtu">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Cybroxtu's Personal Blog">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Recast 学习记录之四：构建轮廓
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-04-08 00:00:00" itemprop="dateCreated datePublished" datetime="2021-04-08T00:00:00+08:00">2021-04-08</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2021-04-09 00:54:52" itemprop="dateModified" datetime="2021-04-09T00:54:52+08:00">2021-04-09</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/pathfinding/" itemprop="url" rel="index"><span itemprop="name">pathfinding</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h2 id="序"><a href="#序" class="headerlink" title="序"></a>序</h2><p>本文根据 <code>Sample_SoloMesh::handleBuild</code> 中的 <code>Step 5. Trace and simplify region contours</code> 进行源码解析。</p>
+<p>前面已经将高度场内的 span 都划分和标记了区域，这一步就是要给区域描边，确定出轮廓线条。同时也将后续处理的重点，从体素转移到顶点和线段上。</p>
+<h2 id="rcBuildContours"><a href="#rcBuildContours" class="headerlink" title="rcBuildContours"></a><code>rcBuildContours</code></h2><p>这一步通过函数 <code>rcBuildContours</code> 建立轮廓线条，其主要步骤如下：</p>
+<h3 id="填充-rcContourSet"><a href="#填充-rcContourSet" class="headerlink" title="填充 rcContourSet"></a>填充 <code>rcContourSet</code></h3><p>填充 <code>rcContourSet</code>，根据 <code>borderSize</code> 对轮廓线集合的包围盒坐标进行调整；</p>
+<h3 id="标记-span-的不连通方向"><a href="#标记-span-的不连通方向" class="headerlink" title="标记 span 的不连通方向"></a>标记 span 的不连通方向</h3><p>将高度场内所有 span 的 <strong>不连通方向</strong> 标记出来，存到 <code>flags</code> 数组中，供后续 <code>walkContour</code> 使用。</p>
+<p>当 <code>flags[i] == 0</code> 时，有三种可能：</p>
+<ol>
+<li>对应的 span 处于区域内部，无需考虑;</li>
+<li>对应的 span 位于区域边界，但其已经被处理过；</li>
+<li>span 位于 tile 的边界 <code>borderSize</code> 范围内（<code>RC_BORDER_REG</code>），同样可以略过；</li>
+</ol>
+<p>当 <code>flags[i] == 0x3f</code> 时，代表对应的 span 其四方向上均不连通，这种 span 可以安全地被忽略掉，不用处理。</p>
+<span id="more"></span>
+
+<h3 id="遍历高度场内所有-span"><a href="#遍历高度场内所有-span" class="headerlink" title="遍历高度场内所有 span"></a>遍历高度场内所有 span</h3><p>遍历高度场内所有 <code>flags</code> 对应值不为 0 的 span，一一构建轮廓线。</p>
+<h4 id="walkContour-构建轮廓线"><a href="#walkContour-构建轮廓线" class="headerlink" title="walkContour 构建轮廓线"></a><code>walkContour</code> 构建轮廓线</h4><p>和 <code>RecastRegion.cpp</code> 中的 <code>walkContour</code> 类似，这里采用的是相同的遍历方法。</p>
+<p>以坐标为 <code>(x, y)</code> 的 <code>chf.spans[i]</code> 为起点，以该 span 第一个不连通的方向 <code>dir</code> 为初始方向开始检测，如果当前 span 在该方向上不连通，那么将对应的坐标添加到轮廓中，并且将方向顺时针转动一个单位；如果在该方向上是连通的，那么将当前位置移动到该邻接 span 的坐标，并且将方向逆时针转动一个单位。达到的效果就是遇到障碍就向右转，不是障碍就前进，并且左转，这样就能达成贴着区域的边将其边界点一个一个记录下来的目的。并且最后记录下来的轮廓顶点是顺时针方向记录下来的。</p>
+<p>记录下来的轮廓顶点坐标是个四元组，分别是 x y z r，其中 x z 是格子横纵坐标，y 是 span 在指定方向顺时针四个邻接 span 里的最大高度，r 是遍历时检查的邻接 span 的 reg id。要注意，这个 reg id 并不对应记录的轮廓顶点的 reg id。这个函数比较迷惑的就是具体确定轮廓顶点坐标的这一段代码了：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">void</span> <span class="title">walkContour</span><span class="params">(<span class="keyword">int</span> x, <span class="keyword">int</span> y, <span class="keyword">int</span> i,</span></span></span><br><span class="line"><span class="function"><span class="params">                        rcCompactHeightfield&amp; chf,</span></span></span><br><span class="line"><span class="function"><span class="params">                        <span class="keyword">unsigned</span> <span class="keyword">char</span>* flags, rcIntArray&amp; points)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">            <span class="comment">// ...</span></span><br><span class="line">            <span class="keyword">int</span> px = x;</span><br><span class="line">            <span class="keyword">int</span> py = <span class="built_in">getCornerHeight</span>(x, y, i, dir, chf, isBorderVertex);</span><br><span class="line">            <span class="keyword">int</span> pz = y;</span><br><span class="line">            <span class="built_in"><span class="keyword">switch</span></span>(dir)</span><br><span class="line">            &#123;</span><br><span class="line">                <span class="keyword">case</span> <span class="number">0</span>: pz++; <span class="keyword">break</span>;</span><br><span class="line">                <span class="keyword">case</span> <span class="number">1</span>: px++; pz++; <span class="keyword">break</span>;</span><br><span class="line">                <span class="keyword">case</span> <span class="number">2</span>: px++; <span class="keyword">break</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="comment">// ...</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>可以看到，当方向朝左时，<code>pz</code> 坐标加一，也就是取上方的格子坐标；当方向朝上时，<code>px</code>、<code>pz</code> 坐标各加一，也就是取右上方的格子坐标；当方向朝右时，取右边的格子坐标；当方向朝下时，就取当前格子的坐标。</p>
+<p>作者的注释里说 <code>The raw contours will match the region outlines exactly</code>，但是显然有了上面的坐标偏移处理后，生成的轮廓并不能精确地与区域进行匹配。下面是推导的一个例子，从坐标 (31, 18) 开始，方向为 0，最终得到的轮廓线条其实有一部分是位于别的区域里面的：</p>
+<div style="width:70%;margin:auto"><img src="/pathfinding/recast_learning_4_trace_contour/walkContour_1.png" class=""></div>
+
+<p>为什么不直接将八方向里凡是有不连通的邻接关系的区域内 span 直接标记为轮廓顶点呢？这样肯定是完美匹配原始区域形状的，比如。</p>
+<div style="width:70%;margin:auto"><img src="/pathfinding/recast_learning_4_trace_contour/walkContour_2.png" class=""></div>
+
+<p>对于这一点，没能在网上找到相关的解释。对此，我的一个猜想是，下面这种精准匹配的方法反而存在一个问题：区域与区域之间完全独立了。而 Recast 采用的办法，在区域的上边、右边的轮廓线均向相邻的区域延伸出了一个格子的边界，而左边、下边则保持精准匹配。同理，该区域相邻的其它区域也都采用这种类似的划分方式，这就带来一个特点：两块相邻区域相接触的轮廓边总是相同的。而且大家都向上、向右多占一格，等于大家谁都没有多占（笑）。</p>
+<p>除了上面的从区域内部向外搜索出轮廓线的情况外，其实还有一种情况就是一个区域 A 内部包含了另一个区域 B。那么在这种情况下，区域 A 其实有两个轮廓线，一个是外部的 <code>outline</code> 轮廓线，另一个就是内部的 <code>hole</code> 轮廓线了：</p>
+<div style="width:30%;margin:auto"><img src="/pathfinding/recast_learning_4_trace_contour/hole.png" class=""></div>
+
+<p>通过简单的例子就能知道，这两种轮廓线是反向的，这一点需要注意，后面对区域内部洞的处理需要用到。</p>
+<h4 id="simplifyContour-对轮廓线进行简化处理"><a href="#simplifyContour-对轮廓线进行简化处理" class="headerlink" title="simplifyContour 对轮廓线进行简化处理"></a><code>simplifyContour</code> 对轮廓线进行简化处理</h4><p>初步的轮廓线计算出来后，和格子组成的区域范围基本上还是贴合的。但是因为基本单位是体素，也就是一个格子的大小，所以会导致轮廓线锯齿感特别明显，同时顶点过多，也对后续的处理造成了不必要的负担。</p>
+<p>下面就要对其进行一定的简化。处理过程分为三步：</p>
+<ol>
+<li>将与同一个区域邻接的连续顶点，简化为只剩一个；如果没有邻接区域，那么就选取坐标里最左下、最右上的两个顶点。这一步可能会产生非常长的线段，在第三步中进行拆分处理；</li>
+<li>遍历简化后的各边 AB，逐一搜索两个端点中间的原始轮廓顶点，查看该顶点 C 与边 AB 的距离，如果距离大于 <code>maxError</code>，则将点 C 插入到 AB 之间，并且以 AC 为边继续遍历；</li>
+<li>遍历简化后的各边 AB，如果 AB 的长度大于 <code>maxEdgeLen</code>，那么就在 AB 中间的原始轮廓顶点中，选取一个中位点 C 添加回来，并以 AC 为边继续遍历；</li>
+<li>恢复轮廓线顶点所对应的 reg id 字段。注释说 <code>The edge vertex flag is take from the current raw point, and the neighbour region is take from the next raw point.</code>，没太明白为什么这么做。</li>
+</ol>
+<p>用上面的例子，第一步简化后：</p>
+<div style="width:70%;margin:auto"><img src="/pathfinding/recast_learning_4_trace_contour/simplify_contour_1.png" class=""></div>
+
+<p>第二步以后：</p>
+<div style="width:70%;margin:auto"><img src="/pathfinding/recast_learning_4_trace_contour/simplify_contour_2.png" class=""></div>
+
+<p>看 RecastDemo 的例子，简化处理前的轮廓：</p>
+<div style="width:70%;margin:auto"><img src="/pathfinding/recast_learning_4_trace_contour/raw_contour.png" class=""></div>
+
+<p>简化处理后的轮廓：</p>
+<div style="width:70%;margin:auto"><img src="/pathfinding/recast_learning_4_trace_contour/simplified_contour.png" class=""></div>
+
+<p>切到 <code>Both Contours</code> 可以直接查看对比：</p>
+<div style="width:70%;margin:auto"><img src="/pathfinding/recast_learning_4_trace_contour/both_contour.png" class=""></div>
+
+<h4 id="removeDegenerateSegments-删除劣化线段"><a href="#removeDegenerateSegments-删除劣化线段" class="headerlink" title="removeDegenerateSegments 删除劣化线段"></a><code>removeDegenerateSegments</code> 删除劣化线段</h4><p>这个逻辑很简单，遍历轮廓线上的所有顶点，查看相邻的两个顶点的 x、z 轴是否相等，是的话将前一个顶点删掉。</p>
+<h3 id="处理区域内的洞"><a href="#处理区域内的洞" class="headerlink" title="处理区域内的洞"></a>处理区域内的洞</h3><h4 id="检测洞是否存在"><a href="#检测洞是否存在" class="headerlink" title="检测洞是否存在"></a>检测洞是否存在</h4><p>遍历所有轮廓，使用 <code>calcAreaOfPolygon2D</code> 可以计算出轮廓多边形的面积，其值的正负取决于轮廓顶点的顺时针、逆时针顺序，也就是取决于前面 <code>walkContour</code> 所得到的轮廓顶点顺序。显然，对于一个 <code>outline</code> 轮廓，其面积大于 0；对于一个 <code>hole</code> 轮廓，其面积小于 0。</p>
+<h4 id="mergeRegionHoles-将洞合并到区域轮廓中"><a href="#mergeRegionHoles-将洞合并到区域轮廓中" class="headerlink" title="mergeRegionHoles 将洞合并到区域轮廓中"></a><code>mergeRegionHoles</code> 将洞合并到区域轮廓中</h4><p>一般来说，一块区域必定有一个 <code>outline</code> 轮廓，可能有多个 <code>hole</code> 轮廓。<code>mergeRegionHoles</code> 里先为每一个 <code>hole</code> 找到其 x 轴坐标最小的顶点，再将这些洞按照 x 轴坐标由小到大（x 轴坐标相等则按照 z 轴坐标由小到大）进行排序。</p>
+<p>然后遍历 <code>hole</code> 轮廓中的每一个顶点，对于每个顶点，在区域对应的 <code>outline</code> 轮廓中，每次取三个连续顶点，判断 <code>hole</code> 顶点是否在这三个点组成的锥形范围内，如果是的话，则认为这个 <code>hole</code> 顶点与 <code>outline</code> 上这三个点的中间点的连线是一个候选的合并线段，并记录下长度。</p>
+<p>最后遍历找出的候选线段，找到一个长度最小、不与 <code>outline</code> 轮廓相交、且不与剩下的 <code>hole</code> 轮廓相交的顶点，这就是该 <code>hole</code> 与 <code>outline</code> 轮廓进行合并的突破口了。</p>
+<p>比如下列区域 ABCDEFGH 中有两个洞 IJK 和 LMNO，那么点 I 显然在 ABC 形成的锥形内且 IB 距离最小，所以洞 IJK 从点 I 进行合并。</p>
+<div style="width:70%;margin:auto"><img src="/pathfinding/recast_learning_4_trace_contour/merge_hole_1.png" class=""></div>
+
+<p>我们把 <code>outline</code> 轮廓从点 B 处断开，形成点 P 和点 S；将 IJK 从点 I 断开，形成点 Q 和点 R。然后将 P 连接到 Q，将 R连接到 S，得到下图：</p>
+<div style="width:70%;margin:auto"><img src="/pathfinding/recast_learning_4_trace_contour/merge_hole_2.png" class=""></div>
+
+<p>注意 PQ、RS 看起来是一条线段，其实是两条重合的线段。</p>
+<p>将右边第二个洞也合并后：</p>
+<div style="width:70%;margin:auto"><img src="/pathfinding/recast_learning_4_trace_contour/merge_hole_3.png" class=""></div>
+
+<p>这种合并方式虽然暂时让区域看起来比较崎岖了一点儿，但是后面建立 <code>rcPolyMesh</code> 的时候，会将区域按顶点重新划分为三角形再合并为凸多边形，所以不会影响后续导航网格的建立。</p>
+
+    </div>
+
+    
+    
+    
+        
+
+<div>
+<ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>Post author:  </strong>Cybroxtu
+  </li>
+  <li class="post-copyright-link">
+    <strong>Post link: </strong>
+    <a href="https://cybroxtu.github.io/pathfinding/recast_learning_4_trace_contour/" title="Recast 学习记录之四：构建轮廓">https://cybroxtu.github.io/pathfinding/recast_learning_4_trace_contour/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>Copyright Notice:  </strong>All articles in this blog are licensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> unless stating additionally.
+  </li>
+</ul>
+</div>
+
+
+      <footer class="post-footer">
+          
+          <div class="post-tags">
+              <a href="/tags/recastnavigation/" rel="tag"><i class="fa fa-tag"></i> recastnavigation</a>
+              <a href="/tags/recast/" rel="tag"><i class="fa fa-tag"></i> recast</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/pathfinding/recast_learning_3_partition_region/" rel="prev" title="Recast 学习记录之三：划分区域">
+      <i class="fa fa-chevron-left"></i> Recast 学习记录之三：划分区域
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/pathfinding/recast_learning_5_build_poly_mesh/" rel="next" title="Recast 学习记录之五：构建多边形网格">
+      Recast 学习记录之五：构建多边形网格 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%BA%8F"><span class="nav-number">1.</span> <span class="nav-text">序</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#rcBuildContours"><span class="nav-number">2.</span> <span class="nav-text">rcBuildContours</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%A1%AB%E5%85%85-rcContourSet"><span class="nav-number">2.1.</span> <span class="nav-text">填充 rcContourSet</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%A0%87%E8%AE%B0-span-%E7%9A%84%E4%B8%8D%E8%BF%9E%E9%80%9A%E6%96%B9%E5%90%91"><span class="nav-number">2.2.</span> <span class="nav-text">标记 span 的不连通方向</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%81%8D%E5%8E%86%E9%AB%98%E5%BA%A6%E5%9C%BA%E5%86%85%E6%89%80%E6%9C%89-span"><span class="nav-number">2.3.</span> <span class="nav-text">遍历高度场内所有 span</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#walkContour-%E6%9E%84%E5%BB%BA%E8%BD%AE%E5%BB%93%E7%BA%BF"><span class="nav-number">2.3.1.</span> <span class="nav-text">walkContour 构建轮廓线</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#simplifyContour-%E5%AF%B9%E8%BD%AE%E5%BB%93%E7%BA%BF%E8%BF%9B%E8%A1%8C%E7%AE%80%E5%8C%96%E5%A4%84%E7%90%86"><span class="nav-number">2.3.2.</span> <span class="nav-text">simplifyContour 对轮廓线进行简化处理</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#removeDegenerateSegments-%E5%88%A0%E9%99%A4%E5%8A%A3%E5%8C%96%E7%BA%BF%E6%AE%B5"><span class="nav-number">2.3.3.</span> <span class="nav-text">removeDegenerateSegments 删除劣化线段</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%A4%84%E7%90%86%E5%8C%BA%E5%9F%9F%E5%86%85%E7%9A%84%E6%B4%9E"><span class="nav-number">2.4.</span> <span class="nav-text">处理区域内的洞</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%A3%80%E6%B5%8B%E6%B4%9E%E6%98%AF%E5%90%A6%E5%AD%98%E5%9C%A8"><span class="nav-number">2.4.1.</span> <span class="nav-text">检测洞是否存在</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#mergeRegionHoles-%E5%B0%86%E6%B4%9E%E5%90%88%E5%B9%B6%E5%88%B0%E5%8C%BA%E5%9F%9F%E8%BD%AE%E5%BB%93%E4%B8%AD"><span class="nav-number">2.4.2.</span> <span class="nav-text">mergeRegionHoles 将洞合并到区域轮廓中</span></a></li></ol></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Cybroxtu"
+      src="https://avatars.githubusercontent.com/u/77186652?v=4">
+  <p class="site-author-name" itemprop="name">Cybroxtu</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">8</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">1</span>
+        <span class="site-state-item-name">categories</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">tags</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/cybroxtu" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;cybroxtu" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:cybroxtu#gmail.com" title="E-Mail → mailto:cybroxtu#gmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+  <div class="cc-license motion-element" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="/images/cc-by-nc-sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Cybroxtu</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://mist.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+
+</body>
+</html>

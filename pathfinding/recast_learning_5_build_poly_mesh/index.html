@@ -20,15 +20,21 @@
     var CONFIG = {"hostname":"cybroxtu.github.io","root":"/","scheme":"Mist","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"always","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
   </script>
 
-  <meta property="og:type" content="website">
-<meta property="og:title" content="Cybroxtu&#39;s Personal Blog">
-<meta property="og:url" content="https://cybroxtu.github.io/archives/index.html">
+  <meta name="description" content="序本文根据 Sample_SoloMesh::handleBuild 中的 Step 6. Build polygons mesh from contours 进行源码解析。 函数 rcBuildPolyMesh 负责将前面得到的轮廓顶点集合转换为可供寻路使用的多边形网格，其主要步骤有：  将轮廓三角化，得到一个三角形集合； 将三角形进行合并，得到凸多边形集合； TODO Remove edge">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Recast 学习记录之五：构建多边形网格">
+<meta property="og:url" content="https://cybroxtu.github.io/pathfinding/recast_learning_5_build_poly_mesh/index.html">
 <meta property="og:site_name" content="Cybroxtu&#39;s Personal Blog">
+<meta property="og:description" content="序本文根据 Sample_SoloMesh::handleBuild 中的 Step 6. Build polygons mesh from contours 进行源码解析。 函数 rcBuildPolyMesh 负责将前面得到的轮廓顶点集合转换为可供寻路使用的多边形网格，其主要步骤有：  将轮廓三角化，得到一个三角形集合； 将三角形进行合并，得到凸多边形集合； TODO Remove edge">
 <meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2021-04-08T16:00:00.000Z">
+<meta property="article:modified_time" content="2021-04-08T17:10:31.364Z">
 <meta property="article:author" content="Cybroxtu">
+<meta property="article:tag" content="recastnavigation">
+<meta property="article:tag" content="recast">
 <meta name="twitter:card" content="summary">
 
-<link rel="canonical" href="https://cybroxtu.github.io/archives/">
+<link rel="canonical" href="https://cybroxtu.github.io/pathfinding/recast_learning_5_build_poly_mesh/">
 
 
 <script id="page-configurations">
@@ -36,12 +42,12 @@
   CONFIG.page = {
     sidebar: "",
     isHome : false,
-    isPost : false,
+    isPost : true,
     lang   : 'zh-cn'
   };
 </script>
 
-  <title>Archive | Cybroxtu's Personal Blog</title>
+  <title>Recast 学习记录之五：构建多边形网格 | Cybroxtu's Personal Blog</title>
   
 
 
@@ -139,190 +145,122 @@
         <div class="content-wrap">
           
 
-          <div class="content archive">
+          <div class="content post posts-expand">
             
 
+    
   
   
-  
-  <div class="post-block">
-    <div class="posts-collapse">
-      <div class="collection-title">
-        <span class="collection-header">Um..! 8 posts in total. Keep on posting.</span>
-      </div>
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-cn">
+    <link itemprop="mainEntityOfPage" href="https://cybroxtu.github.io/pathfinding/recast_learning_5_build_poly_mesh/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="https://avatars.githubusercontent.com/u/77186652?v=4">
+      <meta itemprop="name" content="Cybroxtu">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Cybroxtu's Personal Blog">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Recast 学习记录之五：构建多边形网格
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+              
+
+              <time title="Created: 2021-04-09 00:00:00 / Modified: 01:10:31" itemprop="dateCreated datePublished" datetime="2021-04-09T00:00:00+08:00">2021-04-09</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/pathfinding/" itemprop="url" rel="index"><span itemprop="name">pathfinding</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
 
       
-    <div class="collection-year">
-      <span class="collection-header">2021</span>
-    </div>
-
-  <article itemscope itemtype="http://schema.org/Article">
-    <header class="post-header">
-
-      <div class="post-meta">
-        <time itemprop="dateCreated"
-              datetime="2021-04-10T00:00:00+08:00"
-              content="2021-04-10">
-          04-10
-        </time>
-      </div>
-
-      <div class="post-title">
-          <a class="post-title-link" href="/pathfinding/recast_learning_6_build_detail_mesh/" itemprop="url">
-            <span itemprop="name">Recast 学习记录之六：构建细节网格</span>
-          </a>
-      </div>
-
-    </header>
-  </article>
-
-  <article itemscope itemtype="http://schema.org/Article">
-    <header class="post-header">
-
-      <div class="post-meta">
-        <time itemprop="dateCreated"
-              datetime="2021-04-09T00:00:00+08:00"
-              content="2021-04-09">
-          04-09
-        </time>
-      </div>
-
-      <div class="post-title">
-          <a class="post-title-link" href="/pathfinding/recast_learning_5_build_poly_mesh/" itemprop="url">
-            <span itemprop="name">Recast 学习记录之五：构建多边形网格</span>
-          </a>
-      </div>
-
-    </header>
-  </article>
-
-  <article itemscope itemtype="http://schema.org/Article">
-    <header class="post-header">
-
-      <div class="post-meta">
-        <time itemprop="dateCreated"
-              datetime="2021-04-08T00:00:00+08:00"
-              content="2021-04-08">
-          04-08
-        </time>
-      </div>
-
-      <div class="post-title">
-          <a class="post-title-link" href="/pathfinding/recast_learning_4_trace_contour/" itemprop="url">
-            <span itemprop="name">Recast 学习记录之四：构建轮廓</span>
-          </a>
-      </div>
-
-    </header>
-  </article>
-
-  <article itemscope itemtype="http://schema.org/Article">
-    <header class="post-header">
-
-      <div class="post-meta">
-        <time itemprop="dateCreated"
-              datetime="2021-04-07T00:00:00+08:00"
-              content="2021-04-07">
-          04-07
-        </time>
-      </div>
-
-      <div class="post-title">
-          <a class="post-title-link" href="/pathfinding/recast_learning_3_partition_region/" itemprop="url">
-            <span itemprop="name">Recast 学习记录之三：划分区域</span>
-          </a>
-      </div>
-
-    </header>
-  </article>
-
-  <article itemscope itemtype="http://schema.org/Article">
-    <header class="post-header">
-
-      <div class="post-meta">
-        <time itemprop="dateCreated"
-              datetime="2021-04-06T00:00:00+08:00"
-              content="2021-04-06">
-          04-06
-        </time>
-      </div>
-
-      <div class="post-title">
-          <a class="post-title-link" href="/pathfinding/recast_learning_2_filter_walkable_surface/" itemprop="url">
-            <span itemprop="name">Recast 学习记录之二：过滤可行走表面</span>
-          </a>
-      </div>
-
-    </header>
-  </article>
-
-  <article itemscope itemtype="http://schema.org/Article">
-    <header class="post-header">
-
-      <div class="post-meta">
-        <time itemprop="dateCreated"
-              datetime="2021-04-02T00:00:00+08:00"
-              content="2021-04-02">
-          04-02
-        </time>
-      </div>
-
-      <div class="post-title">
-          <a class="post-title-link" href="/pathfinding/recast_learning_1_rasterize_triangle/" itemprop="url">
-            <span itemprop="name">Recast 学习记录之一：三角形光栅化、构建高度场</span>
-          </a>
-      </div>
-
-    </header>
-  </article>
-
-  <article itemscope itemtype="http://schema.org/Article">
-    <header class="post-header">
-
-      <div class="post-meta">
-        <time itemprop="dateCreated"
-              datetime="2021-04-01T00:00:00+08:00"
-              content="2021-04-01">
-          04-01
-        </time>
-      </div>
-
-      <div class="post-title">
-          <a class="post-title-link" href="/pathfinding/recast_learning_0_overall/" itemprop="url">
-            <span itemprop="name">Recast 学习记录之零：构建流程总览</span>
-          </a>
-      </div>
-
-    </header>
-  </article>
-
-  <article itemscope itemtype="http://schema.org/Article">
-    <header class="post-header">
-
-      <div class="post-meta">
-        <time itemprop="dateCreated"
-              datetime="2021-03-31T00:00:00+08:00"
-              content="2021-03-31">
-          03-31
-        </time>
-      </div>
-
-      <div class="post-title">
-          <a class="post-title-link" href="/hello-world/" itemprop="url">
-            <span itemprop="name">Hello World</span>
-          </a>
-      </div>
-
-    </header>
-  </article>
+        <h2 id="序"><a href="#序" class="headerlink" title="序"></a>序</h2><p>本文根据 <code>Sample_SoloMesh::handleBuild</code> 中的 <code>Step 6. Build polygons mesh from contours</code> 进行源码解析。</p>
+<p>函数 <code>rcBuildPolyMesh</code> 负责将前面得到的轮廓顶点集合转换为可供寻路使用的多边形网格，其主要步骤有：</p>
+<ol>
+<li>将轮廓三角化，得到一个三角形集合；</li>
+<li>将三角形进行合并，得到凸多边形集合；</li>
+<li>TODO Remove edge vertices</li>
+<li>计算凸多边形的邻接关系；</li>
+<li>Find portal edges</li>
+</ol>
+<p>施工中…</p>
+<span id="more"></span>
 
 
     </div>
-  </div>
-  
-  
-  
 
+    
+    
+    
+        
+
+<div>
+<ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>Post author:  </strong>Cybroxtu
+  </li>
+  <li class="post-copyright-link">
+    <strong>Post link: </strong>
+    <a href="https://cybroxtu.github.io/pathfinding/recast_learning_5_build_poly_mesh/" title="Recast 学习记录之五：构建多边形网格">https://cybroxtu.github.io/pathfinding/recast_learning_5_build_poly_mesh/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>Copyright Notice:  </strong>All articles in this blog are licensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> unless stating additionally.
+  </li>
+</ul>
+</div>
+
+
+      <footer class="post-footer">
+          
+          <div class="post-tags">
+              <a href="/tags/recastnavigation/" rel="tag"><i class="fa fa-tag"></i> recastnavigation</a>
+              <a href="/tags/recast/" rel="tag"><i class="fa fa-tag"></i> recast</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/pathfinding/recast_learning_4_trace_contour/" rel="prev" title="Recast 学习记录之四：构建轮廓">
+      <i class="fa fa-chevron-left"></i> Recast 学习记录之四：构建轮廓
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/pathfinding/recast_learning_6_build_detail_mesh/" rel="next" title="Recast 学习记录之六：构建细节网格">
+      Recast 学习记录之六：构建细节网格 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
   
 
 
@@ -375,6 +313,7 @@
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%BA%8F"><span class="nav-number">1.</span> <span class="nav-text">序</span></a></li></ol></div>
       </div>
       <!--/noindex-->
 
@@ -496,6 +435,59 @@
   
 
   
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
 
   
 

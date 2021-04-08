@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"cybroxtu.github.io","root":"/","scheme":"Mist","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"always","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="序本文根据 Sample_SoloMesh::handleBuild 中的 Step 3. Filter walkables surfaces 进行源码解析。 前面 Recast 将三角形表面根据坡度进行了可行走性的标记，并将三角形进行了光栅化，转换后的 solid span 也继承了三角形的可行走标记。而这一流程将进一步对这些 span 进行可行走性的筛选和过滤。过滤方式有三个：  rcFilt">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Recast 学习记录之二：过滤可行走表面">
+<meta property="og:url" content="https://cybroxtu.github.io/pathfinding/recast_learning_2_filter_walkable_surface/index.html">
+<meta property="og:site_name" content="Cybroxtu&#39;s Personal Blog">
+<meta property="og:description" content="序本文根据 Sample_SoloMesh::handleBuild 中的 Step 3. Filter walkables surfaces 进行源码解析。 前面 Recast 将三角形表面根据坡度进行了可行走性的标记，并将三角形进行了光栅化，转换后的 solid span 也继承了三角形的可行走标记。而这一流程将进一步对这些 span 进行可行走性的筛选和过滤。过滤方式有三个：  rcFilt">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://cybroxtu.github.io/pathfinding/recast_learning_2_filter_walkable_surface/drift_2.jpg">
+<meta property="og:image" content="https://cybroxtu.github.io/pathfinding/recast_learning_2_filter_walkable_surface/fringe_first.jpg">
+<meta property="og:image" content="https://cybroxtu.github.io/pathfinding/recast_learning_2_filter_walkable_surface/fringe_bad_voxels.jpg">
+<meta property="og:image" content="https://cybroxtu.github.io/pathfinding/recast_learning_2_filter_walkable_surface/fringe_second.jpg">
+<meta property="og:image" content="https://cybroxtu.github.io/pathfinding/recast_learning_2_filter_walkable_surface/fringe_third.jpg">
+<meta property="og:image" content="https://cybroxtu.github.io/pathfinding/recast_learning_2_filter_walkable_surface/wvx_with_ledge_filter.png">
+<meta property="og:image" content="https://cybroxtu.github.io/pathfinding/recast_learning_2_filter_walkable_surface/wvx_without_ledge_filter.png">
+<meta property="og:image" content="https://cybroxtu.github.io/pathfinding/recast_learning_2_filter_walkable_surface/fringe_neighbour.jpg">
+<meta property="og:image" content="https://cybroxtu.github.io/pathfinding/recast_learning_2_filter_walkable_surface/fringe_overflow.jpg">
+<meta property="og:image" content="https://cybroxtu.github.io/pathfinding/recast_learning_2_filter_walkable_surface/low_height.png">
+<meta property="article:published_time" content="2021-04-05T16:00:00.000Z">
+<meta property="article:modified_time" content="2021-04-08T16:54:41.184Z">
+<meta property="article:author" content="Cybroxtu">
+<meta property="article:tag" content="recastnavigation">
+<meta property="article:tag" content="recast">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://cybroxtu.github.io/pathfinding/recast_learning_2_filter_walkable_surface/drift_2.jpg">
+
+<link rel="canonical" href="https://cybroxtu.github.io/pathfinding/recast_learning_2_filter_walkable_surface/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-cn'
+  };
+</script>
+
+  <title>Recast 学习记录之二：过滤可行走表面 | Cybroxtu's Personal Blog</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">Cybroxtu's Personal Blog</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-cn">
+    <link itemprop="mainEntityOfPage" href="https://cybroxtu.github.io/pathfinding/recast_learning_2_filter_walkable_surface/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="https://avatars.githubusercontent.com/u/77186652?v=4">
+      <meta itemprop="name" content="Cybroxtu">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Cybroxtu's Personal Blog">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Recast 学习记录之二：过滤可行走表面
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-04-06 00:00:00" itemprop="dateCreated datePublished" datetime="2021-04-06T00:00:00+08:00">2021-04-06</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2021-04-09 00:54:41" itemprop="dateModified" datetime="2021-04-09T00:54:41+08:00">2021-04-09</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/pathfinding/" itemprop="url" rel="index"><span itemprop="name">pathfinding</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h2 id="序"><a href="#序" class="headerlink" title="序"></a>序</h2><p>本文根据 <code>Sample_SoloMesh::handleBuild</code> 中的 <code>Step 3. Filter walkables surfaces</code> 进行源码解析。</p>
+<p>前面 Recast 将三角形表面根据坡度进行了可行走性的标记，并将三角形进行了光栅化，转换后的 solid span 也继承了三角形的可行走标记。而这一流程将进一步对这些 span 进行可行走性的筛选和过滤。过滤方式有三个：</p>
+<ol>
+<li><p><code>rcFilterLowHangingWalkableObstacles</code>: 如果一个 span 不可行走，但是其下方 span 可以行走，且两个 span 的顶部高度差在 walkableClimb 以内，则将上方的 span 标记为可以行走。</p>
+</li>
+<li><p><code>rcFilterLedgeSpans</code>: 将与邻接 span 超过一定高度差的 span 标记为不可行走。</p>
+</li>
+<li><p><code>rcFilterWalkableLowHeightSpans</code>: 将不满足可行走高度空间的 span 标记为不可行走。</p>
+</li>
+</ol>
+<span id="more"></span>
+
+<h2 id="rcFilterLowHangingWalkableObstacles"><a href="#rcFilterLowHangingWalkableObstacles" class="headerlink" title="rcFilterLowHangingWalkableObstacles"></a><code>rcFilterLowHangingWalkableObstacles</code></h2><p>这个函数的逻辑比较简单，就是遍历所有的格子，如果在同一个格子内、当前 span 不可行走，但是其正下方第一个距离 <code>walkableClimb</code> 以内的 span 可以行走，则将当前 span 也标记为可以行走。</p>
+<p>那什么情况下需要用到这个处理呢？</p>
+<p>根据函数名 “low hanging” 可以认为，其主要目的是将一些悬空但是离可行走表面比较近（<code>walkableClimb</code> 以内）的模型表面标记为可以行走。但是如果模型平面符合坡度要求，那么模型本来就应该是可以行走的。所以这个函数要处理的应该是由陡坡斜面体素化而来的不可行走的 span。可以想象，如果一个 span 的高度离可行走表面的距离在 <code>walkableClimb</code> 以内，那么不管它的坡度有多陡峭，寻路实体应该都是需要能走上去的。</p>
+<p>库作者 Mikko 在他的一篇博客 <a target="_blank" rel="noopener" href="http://digestingduck.blogspot.com/2010/01/rough-fringes.html">Rough Fringes（需梯子）</a>里解释了添加 <code>rcFilterLowHangingWalkableObstacles</code> 的原因，摘录并翻译如下：</p>
+<blockquote>
+<p>现在有一个 bug 时不时地就会出现，修起来又很烦。问题出在输入的部分模型有着既短又陡的斜面，通常是陡坡或者一些装饰性的模型。但是这些多边形会在边附近产生几个体素大小的洞，而这些洞又会导致最终生成的导航网格上出现洞。这就是在特定情况下由三角形的保守体素化算法产生的过度保守的结果。</p>
+<p>…</p>
+<p>我做了些测试来凸显出这个问题。下图 F 以外所有障碍的高度都允许寻路实体通过（在 walkableClimb 内）。障碍 A 是个边缘陡峭的简单盒体。B 到 E 的形状都相同，其中 B 的大小是其它障碍的两倍，C 贴在地上，D 悬浮在地上但是高度很低，依旧允许寻路实体通过，E 则是个两个障碍叠在了一起。</p>
+<p><img src="drift_2.jpg"></p>
+<p>下面左边的图就是生成的网格，看上去就不太好。中间和右边两张图片分别是体素和输入模型三角形的图片。红色的三角形代表其坡度太陡（大于 walkableSlopeAngle），暗红色体素代表不能行走的区域。</p>
+<p><img src="fringe_first.jpg"></p>
+<p>拉近点儿看看这三个障碍。问题在于在体素化的过程中，一部分体素因为其所属多边形太陡峭而被标记为不可行走。</p>
+<p><img src="fringe_bad_voxels.jpg"></p>
+<p>现在已经有代码来尝试处理这种情况：如果一个不可行走区域离一个可行走区域实在是特别近，那就将其标记为可以行走。所以上述问题解决办法的第一步就是将其扩展一下（译注：已有代码指的是 addSpan 时对垂直方向上 span 的合并流程，之前 flagMergeThr 是固定的 1。这里 <code>rasterizeTri</code> 与 <code>addSpan</code> 新增了参数 <code>flagMergeThr</code>，见 <a target="_blank" rel="noopener" href="https://github.com/recastnavigation/recastnavigation/commit/9bf68216a33e822584a183e740ec26a7d8a59f2d">commit@9bf6821</a>）。</p>
+<p>之前的阈值为了表示足够近，使用的是一个体素的值，现在我们可以将其扩展到寻路实体的步高（walkableClimb）。修改后生成的网格如下：</p>
+<p><img src="fringe_second.jpg"></p>
+<p>这样就好多了，部分错误已经完全被修正，但是不直接与可行走地面相连的障碍处理依旧有问题。所以下一步就要遍历所有的体素，如果它的下方有可行走的体素，就检查两者上表面的高度差是否在寻路实体最大步高内。这样基本上就修正了剩下的其它问题。这个筛选可以调用 <code>rcFilterLowHangingWalkableObstacles</code> 来进行。</p>
+<p><img src="fringe_third.jpg"></p>
+</blockquote>
+<h2 id="rcFilterLedgeSpans"><a href="#rcFilterLedgeSpans" class="headerlink" title="rcFilterLedgeSpans"></a><code>rcFilterLedgeSpans</code></h2><p><code>Ledge</code> 的定义是：一个 span 与其四方向里任一邻接 span 上表面的高度差的绝对值大于 <code>walkableClimb</code>。从定义可以看出，ledge 就是高度与周围环境发生较大变化的 span。</p>
+<p>开启 <code>rcFilterLedgeSpans</code> 后生成的 <code>walkable voxels</code>：</p>
+<div style="width:70%;margin:auto"><img src="/pathfinding/recast_learning_2_filter_walkable_surface/wvx_with_ledge_filter.png" class=""></div>
+
+<p>关闭 <code>rcFilterLedgeSpans</code> 后生成的 <code>walkable voxels</code>：</p>
+<div style="width:70%;margin:auto"><img src="/pathfinding/recast_learning_2_filter_walkable_surface/wvx_without_ledge_filter.png" class=""></div>
+
+<p>可以看到两个特点：</p>
+<ol>
+<li><code>rcFilterLedgeSpans</code> 决定了高度巨变的边缘处是否要留出不可行走区域；</li>
+<li>较大高度差的两个相邻 span，总是将较高的那个标记为不可行走（这点从源码里 <code>if (minh &lt; -walkableClimb)</code> 的判断也可以看出）；</li>
+</ol>
+<p>但是 <code>rcFilterLedgeSpans</code> 中除了对 ledge 的处理外，还有个 <code>else if ((asmax - asmin) &gt; walkableClimb)</code> 的判断。其中 <code>asmax</code> 和 <code>asmin</code> 分别是当前 span 四方向邻接 span 里的最大、最小高度坐标。所以这里的意思是当一个 span 四方向里高度差变化大于了 <code>walkableClimb</code> 时，也需要将该 span 标记为不可行走。</p>
+<p>Mikko 在 <a target="_blank" rel="noopener" href="http://digestingduck.blogspot.com/2010/01/rough-fringes.html">Rough Fringes（需梯子）</a>里有继续解释：</p>
+<blockquote>
+<p>在一些特定情况下，这个流程（指 rcFilterLowHangingWalkableObstacles）可能会产生过度优化的结果。不过就算没有这些新加的步骤，步高的检查依旧会产生一些不理想的情况。导致这个问题的原因就是因为步高的检查只在邻接 span 里进行。</p>
+<p><img src="fringe_neighbour.jpg"></p>
+<p>如果现在有很多相邻的体素，其两两之间高度差都是一个较大的步高，那上面的算法就会导致寻路实体能在这些陡坡上移动。而如果这些 span 来自于坡度很高的多边形，那这些邻接 span 本应该被标记为不可移动。</p>
+<p>所以我又为此增加了一个修正措施。方法就是在 <code>rcFilterLedgeSpans</code> 里新增了一段逻辑（译注：asmin、asmax 相关的逻辑），如果一个体素在相对的方向上有邻接 span 同时要求较大步高的情况，那么将其标记为不可行走（译注：这个说法和代码里的逻辑不太一样，代码里并没有针对方向做处理，任意两个方向均可）。因为遍历高度场的邻接关系比较耗性能，所以我直接将这段逻辑加在了一个已有遍历邻接 span 逻辑的函数里。</p>
+<p>下图是测试结果。左图中在边中间部位圈出的角之所以会形成，是因为角色在上面的位置可以站的比坡下的位置离柱子底座更近，而坡下的位置底座部分已经成为了一堵墙。</p>
+<p><img src="fringe_overflow.jpg"></p>
+</blockquote>
+<p>因为 <code>rcFilterLedgeSpans</code> 会将连续大步高的倾斜面 span 标记为不可行走，而 <code>rcFilterLowHangingWalkableObstacles</code> 可能会将符合条件的包括 ledge 和大步高倾斜面在内的 span 标记为可以行走，所以 <code>rcFilterLedgeSpans</code> 一定要在放在其后进行调用。</p>
+<h2 id="rcFilterWalkableLowHeightSpans"><a href="#rcFilterWalkableLowHeightSpans" class="headerlink" title="rcFilterWalkableLowHeightSpans"></a><code>rcFilterWalkableLowHeightSpans</code></h2><p>这个函数就是为了剔除掉两块可行走空间的通过高度不够的地方。</p>
+<div style="width:40%;margin:auto"><img src="/pathfinding/recast_learning_2_filter_walkable_surface/low_height.png" class=""></div>
+
+<p>假设 <code>walkableHeight</code> 为 2，那么 H1 满足要求，H2 不满要求，则需要将右方的 span 标记为不可行走。</p>
+
+    </div>
+
+    
+    
+    
+        
+
+<div>
+<ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>Post author:  </strong>Cybroxtu
+  </li>
+  <li class="post-copyright-link">
+    <strong>Post link: </strong>
+    <a href="https://cybroxtu.github.io/pathfinding/recast_learning_2_filter_walkable_surface/" title="Recast 学习记录之二：过滤可行走表面">https://cybroxtu.github.io/pathfinding/recast_learning_2_filter_walkable_surface/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>Copyright Notice:  </strong>All articles in this blog are licensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> unless stating additionally.
+  </li>
+</ul>
+</div>
+
+
+      <footer class="post-footer">
+          
+          <div class="post-tags">
+              <a href="/tags/recastnavigation/" rel="tag"><i class="fa fa-tag"></i> recastnavigation</a>
+              <a href="/tags/recast/" rel="tag"><i class="fa fa-tag"></i> recast</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/pathfinding/recast_learning_1_rasterize_triangle/" rel="prev" title="Recast 学习记录之一：三角形光栅化、构建高度场">
+      <i class="fa fa-chevron-left"></i> Recast 学习记录之一：三角形光栅化、构建高度场
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/pathfinding/recast_learning_3_partition_region/" rel="next" title="Recast 学习记录之三：划分区域">
+      Recast 学习记录之三：划分区域 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%BA%8F"><span class="nav-number">1.</span> <span class="nav-text">序</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#rcFilterLowHangingWalkableObstacles"><span class="nav-number">2.</span> <span class="nav-text">rcFilterLowHangingWalkableObstacles</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#rcFilterLedgeSpans"><span class="nav-number">3.</span> <span class="nav-text">rcFilterLedgeSpans</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#rcFilterWalkableLowHeightSpans"><span class="nav-number">4.</span> <span class="nav-text">rcFilterWalkableLowHeightSpans</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Cybroxtu"
+      src="https://avatars.githubusercontent.com/u/77186652?v=4">
+  <p class="site-author-name" itemprop="name">Cybroxtu</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">8</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">1</span>
+        <span class="site-state-item-name">categories</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">tags</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/cybroxtu" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;cybroxtu" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:cybroxtu#gmail.com" title="E-Mail → mailto:cybroxtu#gmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+  <div class="cc-license motion-element" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="/images/cc-by-nc-sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Cybroxtu</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://mist.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+  
+
+</body>
+</html>

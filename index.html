@@ -17,7 +17,7 @@
 
 <script id="hexo-configurations">
     var NexT = window.NexT || {};
-    var CONFIG = {"hostname":"cybroxtu.github.io","root":"/","scheme":"Mist","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+    var CONFIG = {"hostname":"cybroxtu.github.io","root":"/","scheme":"Mist","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"always","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
   </script>
 
   <meta property="og:type" content="website">
@@ -145,10 +145,10 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-cn">
-    <link itemprop="mainEntityOfPage" href="https://cybroxtu.github.io/2021/03/29/hello-world/">
+    <link itemprop="mainEntityOfPage" href="https://cybroxtu.github.io/pathfinding/recast_learning_6_build_detail_mesh/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="image" content="https://avatars.githubusercontent.com/u/77186652?v=4">
       <meta itemprop="name" content="Cybroxtu">
       <meta itemprop="description" content="">
     </span>
@@ -159,7 +159,7 @@
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
           
-            <a href="/2021/03/29/hello-world/" class="post-title-link" itemprop="url">Hello World</a>
+            <a href="/pathfinding/recast_learning_6_build_detail_mesh/" class="post-title-link" itemprop="url">Recast 学习记录之六：构建细节网格</a>
         </h2>
 
         <div class="post-meta">
@@ -169,8 +169,625 @@
               </span>
               <span class="post-meta-item-text">Posted on</span>
 
-              <time title="Created: 2021-03-29 13:46:31" itemprop="dateCreated datePublished" datetime="2021-03-29T13:46:31+08:00">2021-03-29</time>
+              <time title="Created: 2021-04-10 00:00:00" itemprop="dateCreated datePublished" datetime="2021-04-10T00:00:00+08:00">2021-04-10</time>
             </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2021-04-09 01:10:46" itemprop="dateModified" datetime="2021-04-09T01:10:46+08:00">2021-04-09</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/pathfinding/" itemprop="url" rel="index"><span itemprop="name">pathfinding</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h2 id="序"><a href="#序" class="headerlink" title="序"></a>序</h2><p>本文根据 <code>Sample_SoloMesh::handleBuild</code> 中的 <code>Step 7. Create detail mesh which allows to access approximate height on each polygon</code> 进行源码解析。</p>
+<p>施工中…</p>
+
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-cn">
+    <link itemprop="mainEntityOfPage" href="https://cybroxtu.github.io/pathfinding/recast_learning_5_build_poly_mesh/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="https://avatars.githubusercontent.com/u/77186652?v=4">
+      <meta itemprop="name" content="Cybroxtu">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Cybroxtu's Personal Blog">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/pathfinding/recast_learning_5_build_poly_mesh/" class="post-title-link" itemprop="url">Recast 学习记录之五：构建多边形网格</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+              
+
+              <time title="Created: 2021-04-09 00:00:00 / Modified: 01:10:31" itemprop="dateCreated datePublished" datetime="2021-04-09T00:00:00+08:00">2021-04-09</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/pathfinding/" itemprop="url" rel="index"><span itemprop="name">pathfinding</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h2 id="序"><a href="#序" class="headerlink" title="序"></a>序</h2><p>本文根据 <code>Sample_SoloMesh::handleBuild</code> 中的 <code>Step 6. Build polygons mesh from contours</code> 进行源码解析。</p>
+<p>函数 <code>rcBuildPolyMesh</code> 负责将前面得到的轮廓顶点集合转换为可供寻路使用的多边形网格，其主要步骤有：</p>
+<ol>
+<li>将轮廓三角化，得到一个三角形集合；</li>
+<li>将三角形进行合并，得到凸多边形集合；</li>
+<li>TODO Remove edge vertices</li>
+<li>计算凸多边形的邻接关系；</li>
+<li>Find portal edges</li>
+</ol>
+<p>施工中…</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/pathfinding/recast_learning_5_build_poly_mesh/#more" rel="contents">
+                Read more &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-cn">
+    <link itemprop="mainEntityOfPage" href="https://cybroxtu.github.io/pathfinding/recast_learning_4_trace_contour/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="https://avatars.githubusercontent.com/u/77186652?v=4">
+      <meta itemprop="name" content="Cybroxtu">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Cybroxtu's Personal Blog">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/pathfinding/recast_learning_4_trace_contour/" class="post-title-link" itemprop="url">Recast 学习记录之四：构建轮廓</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-04-08 00:00:00" itemprop="dateCreated datePublished" datetime="2021-04-08T00:00:00+08:00">2021-04-08</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2021-04-09 00:54:52" itemprop="dateModified" datetime="2021-04-09T00:54:52+08:00">2021-04-09</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/pathfinding/" itemprop="url" rel="index"><span itemprop="name">pathfinding</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h2 id="序"><a href="#序" class="headerlink" title="序"></a>序</h2><p>本文根据 <code>Sample_SoloMesh::handleBuild</code> 中的 <code>Step 5. Trace and simplify region contours</code> 进行源码解析。</p>
+<p>前面已经将高度场内的 span 都划分和标记了区域，这一步就是要给区域描边，确定出轮廓线条。同时也将后续处理的重点，从体素转移到顶点和线段上。</p>
+<h2 id="rcBuildContours"><a href="#rcBuildContours" class="headerlink" title="rcBuildContours"></a><code>rcBuildContours</code></h2><p>这一步通过函数 <code>rcBuildContours</code> 建立轮廓线条，其主要步骤如下：</p>
+<h3 id="填充-rcContourSet"><a href="#填充-rcContourSet" class="headerlink" title="填充 rcContourSet"></a>填充 <code>rcContourSet</code></h3><p>填充 <code>rcContourSet</code>，根据 <code>borderSize</code> 对轮廓线集合的包围盒坐标进行调整；</p>
+<h3 id="标记-span-的不连通方向"><a href="#标记-span-的不连通方向" class="headerlink" title="标记 span 的不连通方向"></a>标记 span 的不连通方向</h3><p>将高度场内所有 span 的 <strong>不连通方向</strong> 标记出来，存到 <code>flags</code> 数组中，供后续 <code>walkContour</code> 使用。</p>
+<p>当 <code>flags[i] == 0</code> 时，有三种可能：</p>
+<ol>
+<li>对应的 span 处于区域内部，无需考虑;</li>
+<li>对应的 span 位于区域边界，但其已经被处理过；</li>
+<li>span 位于 tile 的边界 <code>borderSize</code> 范围内（<code>RC_BORDER_REG</code>），同样可以略过；</li>
+</ol>
+<p>当 <code>flags[i] == 0x3f</code> 时，代表对应的 span 其四方向上均不连通，这种 span 可以安全地被忽略掉，不用处理。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/pathfinding/recast_learning_4_trace_contour/#more" rel="contents">
+                Read more &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-cn">
+    <link itemprop="mainEntityOfPage" href="https://cybroxtu.github.io/pathfinding/recast_learning_3_partition_region/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="https://avatars.githubusercontent.com/u/77186652?v=4">
+      <meta itemprop="name" content="Cybroxtu">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Cybroxtu's Personal Blog">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/pathfinding/recast_learning_3_partition_region/" class="post-title-link" itemprop="url">Recast 学习记录之三：划分区域</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-04-07 00:00:00" itemprop="dateCreated datePublished" datetime="2021-04-07T00:00:00+08:00">2021-04-07</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2021-04-09 00:54:46" itemprop="dateModified" datetime="2021-04-09T00:54:46+08:00">2021-04-09</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/pathfinding/" itemprop="url" rel="index"><span itemprop="name">pathfinding</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h2 id="序"><a href="#序" class="headerlink" title="序"></a>序</h2><p>本文根据 <code>Sample_SoloMesh::handleBuild</code> 中的 <code>Step 4. Partition walkable surface to simple regions</code> 进行源码解析。</p>
+<p>前面 Recast 已经将三角形面体素化为了高度场，并对可行走表面进行了进一步的筛选。这一步要做的就是将实心高度场（solid heightfield）转换到开放高度场（open heightfield），然后将可行走的体素表面经过一定处理后，划分为多个区域（region）。因时间关系，这里先只看分水岭算法，其它两种划分算法以后有时间再研究。</p>
+<p>一共有五个步骤：</p>
+<ol>
+<li><code>rcBuildCompactHeightfield</code>: 将实心高度场转换到开放高度场。</li>
+<li><code>rcErodeWalkableArea</code>: 根据 <code>walkableRadius</code> 将可行走区域边界进行一定的收缩</li>
+<li><code>rcMarkConvexPolyArea</code>: 将凸多边形区域标记为用户自定义的可行走标记</li>
+<li><code>rcBuildDistanceField</code>: 构建距离场</li>
+<li><code>rcBuildRegions</code>: 分水岭算法划分区域</li>
+</ol>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/pathfinding/recast_learning_3_partition_region/#more" rel="contents">
+                Read more &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-cn">
+    <link itemprop="mainEntityOfPage" href="https://cybroxtu.github.io/pathfinding/recast_learning_2_filter_walkable_surface/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="https://avatars.githubusercontent.com/u/77186652?v=4">
+      <meta itemprop="name" content="Cybroxtu">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Cybroxtu's Personal Blog">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/pathfinding/recast_learning_2_filter_walkable_surface/" class="post-title-link" itemprop="url">Recast 学习记录之二：过滤可行走表面</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-04-06 00:00:00" itemprop="dateCreated datePublished" datetime="2021-04-06T00:00:00+08:00">2021-04-06</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2021-04-09 00:54:41" itemprop="dateModified" datetime="2021-04-09T00:54:41+08:00">2021-04-09</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/pathfinding/" itemprop="url" rel="index"><span itemprop="name">pathfinding</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h2 id="序"><a href="#序" class="headerlink" title="序"></a>序</h2><p>本文根据 <code>Sample_SoloMesh::handleBuild</code> 中的 <code>Step 3. Filter walkables surfaces</code> 进行源码解析。</p>
+<p>前面 Recast 将三角形表面根据坡度进行了可行走性的标记，并将三角形进行了光栅化，转换后的 solid span 也继承了三角形的可行走标记。而这一流程将进一步对这些 span 进行可行走性的筛选和过滤。过滤方式有三个：</p>
+<ol>
+<li><p><code>rcFilterLowHangingWalkableObstacles</code>: 如果一个 span 不可行走，但是其下方 span 可以行走，且两个 span 的顶部高度差在 walkableClimb 以内，则将上方的 span 标记为可以行走。</p>
+</li>
+<li><p><code>rcFilterLedgeSpans</code>: 将与邻接 span 超过一定高度差的 span 标记为不可行走。</p>
+</li>
+<li><p><code>rcFilterWalkableLowHeightSpans</code>: 将不满足可行走高度空间的 span 标记为不可行走。</p>
+</li>
+</ol>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/pathfinding/recast_learning_2_filter_walkable_surface/#more" rel="contents">
+                Read more &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-cn">
+    <link itemprop="mainEntityOfPage" href="https://cybroxtu.github.io/pathfinding/recast_learning_1_rasterize_triangle/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="https://avatars.githubusercontent.com/u/77186652?v=4">
+      <meta itemprop="name" content="Cybroxtu">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Cybroxtu's Personal Blog">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/pathfinding/recast_learning_1_rasterize_triangle/" class="post-title-link" itemprop="url">Recast 学习记录之一：三角形光栅化、构建高度场</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-04-02 00:00:00" itemprop="dateCreated datePublished" datetime="2021-04-02T00:00:00+08:00">2021-04-02</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2021-04-09 00:54:37" itemprop="dateModified" datetime="2021-04-09T00:54:37+08:00">2021-04-09</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/pathfinding/" itemprop="url" rel="index"><span itemprop="name">pathfinding</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h2 id="序"><a href="#序" class="headerlink" title="序"></a>序</h2><p>本文根据 <code>Sample_SoloMesh::handleBuild</code> 中的 <code>Step 2. Rasterize input polygon soup</code> 进行源码解析。</p>
+<h2 id="HeightField-与-Solid-Span"><a href="#HeightField-与-Solid-Span" class="headerlink" title="HeightField 与 Solid Span"></a>HeightField 与 Solid Span</h2><p>高度场的概念：</p>
+<p>Solid Span 的概念：</p>
+<h2 id="rcCreateHeightfield-创建高度场"><a href="#rcCreateHeightfield-创建高度场" class="headerlink" title="rcCreateHeightfield 创建高度场"></a><code>rcCreateHeightfield</code> 创建高度场</h2><p><code>HeightField</code> 和 <code>span</code> 的概念可以看看 <a target="_blank" rel="noopener" href="http://www.critterai.org/projects/nmgen_study/heightfields.html">CritterAI 对高度场的介绍</a>。</p>
+<p>其实就是将模型按照包围盒确定的大小，划分为 cell 网格，每一个网格都使用链表保存垂直方向上的所有 celu。y 轴上连续的 cell 被合并为一个 span，成为 solid span。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/pathfinding/recast_learning_1_rasterize_triangle/#more" rel="contents">
+                Read more &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-cn">
+    <link itemprop="mainEntityOfPage" href="https://cybroxtu.github.io/pathfinding/recast_learning_0_overall/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="https://avatars.githubusercontent.com/u/77186652?v=4">
+      <meta itemprop="name" content="Cybroxtu">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Cybroxtu's Personal Blog">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/pathfinding/recast_learning_0_overall/" class="post-title-link" itemprop="url">Recast 学习记录之零：构建流程总览</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-04-01 00:00:00" itemprop="dateCreated datePublished" datetime="2021-04-01T00:00:00+08:00">2021-04-01</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2021-04-09 00:54:27" itemprop="dateModified" datetime="2021-04-09T00:54:27+08:00">2021-04-09</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/pathfinding/" itemprop="url" rel="index"><span itemprop="name">pathfinding</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h2 id="序"><a href="#序" class="headerlink" title="序"></a>序</h2><p>最近准备把大神 Mikko 的导航网格库 <code>Recastnavigation</code> 的源码给好好看一下，并且把学习内容总结下来，记录成博客。</p>
+<p>本文尽量不长篇地贴代码，而是用自己的理解将流程重新讲一遍，并且尽可能地配上图。</p>
+<p>源码里读过的部分也添加了自己的理解和注释，上传到 Github 上了，可以参考 <a target="_blank" rel="noopener" href="https://github.com/cybroxtu/recastnavigation-study">cybroxtu/recastnavigation-study</a>。</p>
+<p>这里先看 <code>Recast</code> 构建导航网格部分的代码。本文以源码 <code>RecastDemo/Source/Sample_SoloMesh.cpp</code> 中的 <code>Sample_SoloMesh::handleBuild</code> 构建流程为例。</p>
+<h2 id="步骤总览"><a href="#步骤总览" class="headerlink" title="步骤总览"></a>步骤总览</h2><ol>
+<li>从 GUI 收集构建参数</li>
+<li>光栅化三角形，构建高度场 <code>rcHeightField</code></li>
+<li>进一步对可行走表面进行筛选</li>
+<li>将可行走表面划分出区域 <code>region</code></li>
+<li>根据区域确定出其轮廓 <code>contour</code></li>
+<li>根据轮廓将区域划分为凸多边形集合，构建初步的导航网格 <code>rcPolyMesh</code></li>
+<li>创建带有详细高度信息的导航网格 <code>rcPolyMeshDetail</code></li>
+<li>创建 <code>dtNavMesh</code>，供后续寻路处理</li>
+</ol>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/pathfinding/recast_learning_0_overall/#more" rel="contents">
+                Read more &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-cn">
+    <link itemprop="mainEntityOfPage" href="https://cybroxtu.github.io/hello-world/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="https://avatars.githubusercontent.com/u/77186652?v=4">
+      <meta itemprop="name" content="Cybroxtu">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Cybroxtu's Personal Blog">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/hello-world/" class="post-title-link" itemprop="url">Hello World</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-03-31 00:00:00" itemprop="dateCreated datePublished" datetime="2021-03-31T00:00:00+08:00">2021-03-31</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2021-04-08 23:58:39" itemprop="dateModified" datetime="2021-04-08T23:58:39+08:00">2021-04-08</time>
+              </span>
 
           
 
@@ -269,6 +886,8 @@
 
       <div class="site-overview-wrap sidebar-panel">
         <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Cybroxtu"
+      src="https://avatars.githubusercontent.com/u/77186652?v=4">
   <p class="site-author-name" itemprop="name">Cybroxtu</p>
   <div class="site-description" itemprop="description"></div>
 </div>
@@ -277,12 +896,31 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">1</span>
+          <span class="site-state-item-count">8</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">1</span>
+        <span class="site-state-item-name">categories</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">tags</span>
+      </div>
   </nav>
 </div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/cybroxtu" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;cybroxtu" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:cybroxtu#gmail.com" title="E-Mail → mailto:cybroxtu#gmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+  <div class="cc-license motion-element" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="/images/cc-by-nc-sa.svg" alt="Creative Commons"></a>
+  </div>
 
 
 
@@ -362,6 +1000,61 @@
 
 
   
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
 
   
 

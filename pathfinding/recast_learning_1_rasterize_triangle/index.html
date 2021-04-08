@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"cybroxtu.github.io","root":"/","scheme":"Mist","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"always","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="序本文根据 Sample_SoloMesh::handleBuild 中的 Step 2. Rasterize input polygon soup 进行源码解析。 HeightField 与 Solid Span高度场的概念： Solid Span 的概念： rcCreateHeightfield 创建高度场HeightField 和 span 的概念可以看看 CritterAI 对高度场的介绍">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Recast 学习记录之一：三角形光栅化、构建高度场">
+<meta property="og:url" content="https://cybroxtu.github.io/pathfinding/recast_learning_1_rasterize_triangle/index.html">
+<meta property="og:site_name" content="Cybroxtu&#39;s Personal Blog">
+<meta property="og:description" content="序本文根据 Sample_SoloMesh::handleBuild 中的 Step 2. Rasterize input polygon soup 进行源码解析。 HeightField 与 Solid Span高度场的概念： Solid Span 的概念： rcCreateHeightfield 创建高度场HeightField 和 span 的概念可以看看 CritterAI 对高度场的介绍">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://cybroxtu.github.io/pathfinding/recast_learning_1_rasterize_triangle/triangle.png">
+<meta property="og:image" content="https://cybroxtu.github.io/pathfinding/recast_learning_1_rasterize_triangle/rasterize_triangle_1.png">
+<meta property="og:image" content="https://cybroxtu.github.io/pathfinding/recast_learning_1_rasterize_triangle/rasterize_triangle_2.png">
+<meta property="og:image" content="https://cybroxtu.github.io/pathfinding/recast_learning_1_rasterize_triangle/rasterize_triangle_4.png">
+<meta property="og:image" content="https://cybroxtu.github.io/pathfinding/recast_learning_1_rasterize_triangle/divide_poly.png">
+<meta property="article:published_time" content="2021-04-01T16:00:00.000Z">
+<meta property="article:modified_time" content="2021-04-08T16:54:37.147Z">
+<meta property="article:author" content="Cybroxtu">
+<meta property="article:tag" content="recastnavigation">
+<meta property="article:tag" content="recast">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://cybroxtu.github.io/pathfinding/recast_learning_1_rasterize_triangle/triangle.png">
+
+<link rel="canonical" href="https://cybroxtu.github.io/pathfinding/recast_learning_1_rasterize_triangle/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-cn'
+  };
+</script>
+
+  <title>Recast 学习记录之一：三角形光栅化、构建高度场 | Cybroxtu's Personal Blog</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">Cybroxtu's Personal Blog</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-cn">
+    <link itemprop="mainEntityOfPage" href="https://cybroxtu.github.io/pathfinding/recast_learning_1_rasterize_triangle/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="https://avatars.githubusercontent.com/u/77186652?v=4">
+      <meta itemprop="name" content="Cybroxtu">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Cybroxtu's Personal Blog">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Recast 学习记录之一：三角形光栅化、构建高度场
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-04-02 00:00:00" itemprop="dateCreated datePublished" datetime="2021-04-02T00:00:00+08:00">2021-04-02</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2021-04-09 00:54:37" itemprop="dateModified" datetime="2021-04-09T00:54:37+08:00">2021-04-09</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/pathfinding/" itemprop="url" rel="index"><span itemprop="name">pathfinding</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h2 id="序"><a href="#序" class="headerlink" title="序"></a>序</h2><p>本文根据 <code>Sample_SoloMesh::handleBuild</code> 中的 <code>Step 2. Rasterize input polygon soup</code> 进行源码解析。</p>
+<h2 id="HeightField-与-Solid-Span"><a href="#HeightField-与-Solid-Span" class="headerlink" title="HeightField 与 Solid Span"></a>HeightField 与 Solid Span</h2><p>高度场的概念：</p>
+<p>Solid Span 的概念：</p>
+<h2 id="rcCreateHeightfield-创建高度场"><a href="#rcCreateHeightfield-创建高度场" class="headerlink" title="rcCreateHeightfield 创建高度场"></a><code>rcCreateHeightfield</code> 创建高度场</h2><p><code>HeightField</code> 和 <code>span</code> 的概念可以看看 <a target="_blank" rel="noopener" href="http://www.critterai.org/projects/nmgen_study/heightfields.html">CritterAI 对高度场的介绍</a>。</p>
+<p>其实就是将模型按照包围盒确定的大小，划分为 cell 网格，每一个网格都使用链表保存垂直方向上的所有 celu。y 轴上连续的 cell 被合并为一个 span，成为 solid span。</p>
+<span id="more"></span>
+
+<h2 id="rcMarkWalkableTriangles-标记可行走三角形"><a href="#rcMarkWalkableTriangles-标记可行走三角形" class="headerlink" title="rcMarkWalkableTriangles 标记可行走三角形"></a><code>rcMarkWalkableTriangles</code> 标记可行走三角形</h2><p>参数 <code>walkableSlopeAngle</code> 用于指定倾斜角度小于多少的平面才是可以行走的，<code>RecastDemo</code> 中使用的是 45°。</p>
+<p>代码中 <code>walkableThr</code> 由 <code>cosf(walkableSlopeAngle/180.0f*RC_PI)</code> 计算得到，然后计算出三角形的单位法线向量 <code>norm</code>，最后用 <code>if (norm[1] &gt; walkableThr)</code> 判断三角形面是否可以行走。推导过程如下：</p>
+<p>已知三角形逆时针顺序三个点 $A, B, C$ 的坐标，我们可以得到同一点出发的两个向量 $\vec{AB} 和 \vec{AC}$，叉乘可以得到三角形的法线向量 $\vec{d} = \vec{AB}\times\vec{AC}$。设 $\vec{d}$ 与 x-z 轴平面的夹角为 $\alpha$，那么其在 y 轴上的分量即可求得 $y = \sin(\alpha) \times |\vec{d}|$。如果 $\vec{d}$ 是个单位向量，那么可得 $y = \sin(\alpha) * 1 = \sin(\alpha)$。</p>
+<p>又设三角形平面与 x-z 轴平面的夹角为 $\beta$，那么可得 $\alpha = 180^\circ - 90^\circ - \beta = 90^\circ - \beta$。又由三角函数公式可得，$y = \sin(\alpha) = \sin(90^\circ - \beta) = \cos(\beta)$。</p>
+<p>然后我们就能够算出一个平面的倾斜角度是否小于 <code>walkableSlopeAngle</code> 了。</p>
+<p>显然当 $0^\circ \le \beta \lt walkableSlopeAngle$ 时，$y \gt \cos(walkableSlopeAngle)$，此时三角形面可以行走。</p>
+<p>又因为三角形的顶点是有顺序的，所以一个给定的三角形面可以根据其法线向量的 y 轴分量正负值确定其是正面朝上还是朝下。对于面朝下的那些三角形，计算得出的法线向量 y 轴分量会小于 0，此时其三角形表面也是不可行走的。</p>
+<p>至此，就用三角形单位法线向量的 y 轴分量和 $\cos(walkableSlopeAngle)$ 求出了三角形平面是否满足倾斜角度的要求。</p>
+<p>图画的不太好，将就看吧。。。</p>
+<div style="width:80%;margin:auto"><img src="/pathfinding/recast_learning_1_rasterize_triangle/triangle.png" class=""></div>
+
+<h2 id="rcRasterizeTriangles-将三角形进行光栅化处理"><a href="#rcRasterizeTriangles-将三角形进行光栅化处理" class="headerlink" title="rcRasterizeTriangles 将三角形进行光栅化处理"></a><code>rcRasterizeTriangles</code> 将三角形进行光栅化处理</h2><p>将三角形做了行走标记处理后，下一步就要将三角形进行光栅化处理了。</p>
+<p>这一步的核心是要判断三维空间里，一个三角形面与哪些格子相交。如果三角形面与一个格子有任意相交的地方，则需要将这个格子进行体素化处理。</p>
+<p>Recast 中使用 <code>rcRasterizeTriangles</code> 函数来处理三角形的光栅化，函数本身只是遍历所有的三角形，其重点是 <code>rasterizeTri</code>（单个三角形的光栅化）及其调用的 <code>dividePoly</code>（将多边形沿轴线切割为两个多边形）这两个函数。</p>
+<p><code>rasterizeTri</code> 中通过两层 <code>for</code> 循环调用 <code>dividePoly</code> 实现先 z 轴后 x 轴的两方向切割，逐步在 x-z 轴上将三角形切割成一个一个 cellSize 大小的块。</p>
+<p>第一次外层 <code>for</code> 循环在 z 轴上进行切割后如图，这时候我们得到了一个 z 轴上最大长度为 cellSize 的多边形 $BCD$：</p>
+<div style="width:70%;margin:auto"><img src="/pathfinding/recast_learning_1_rasterize_triangle/rasterize_triangle_1.png" class=""></div>
+
+<p>然后内层 <code>for</code> 循环在 x 轴上继续切割 $BCD$，得到多边形 $BEFD$：</p>
+<div style="width:70%;margin:auto"><img src="/pathfinding/recast_learning_1_rasterize_triangle/rasterize_triangle_2.png" class=""></div>
+
+<p>然后我们就可以遍历 $BEFD$ 的四个顶点，找出其 y 轴上的最小、最大值，就可以作为 span 的高度，将其添加到高度场中。</p>
+<p>接着继续切割，直到整个三角形被完全切割完毕：</p>
+<div style="width:70%;margin:auto"><img src="/pathfinding/recast_learning_1_rasterize_triangle/rasterize_triangle_4.png" class=""></div>
+
+<h2 id="dividePoly-将一个凸多边形，按轴线切割为两个凸多边形"><a href="#dividePoly-将一个凸多边形，按轴线切割为两个凸多边形" class="headerlink" title="dividePoly 将一个凸多边形，按轴线切割为两个凸多边形"></a><code>dividePoly</code> 将一个凸多边形，按轴线切割为两个凸多边形</h2><p><code>dividePoly</code> 的参数 <code>axis</code> 用于指明要从哪个轴上进行切割，<code>x</code> 为轴上要进行切割的坐标。</p>
+<p>函数进行切割的步骤如下：</p>
+<ol>
+<li>遍历多边形的每一条边 j-i；</li>
+<li>判断边的两个顶点与切割线的位置关系；</li>
+<li>如果两个顶点一左一右或者其中一个在切割线上，那么在与切割线的交点处生成一个新的顶点，将其同时添加到 out1 和 out2 两个多边形中。对于 i 点，根据其在切割线左右两种情况，将其添加到 out1 或者 out2 中；</li>
+<li>如果两个顶点都在切割线的同一边，那么将点 i 添加到其与切割线左右关系对应的多边形中；</li>
+<li>如果两个顶点都在切割线上，那么将点 i 同时添加到 out1 和 out2 两个多边形中。</li>
+</ol>
+<p>举个栗子，有如下的三角形 $\triangle{ABC}$ 和切割线 $DE$：</p>
+<div style="width:70%;margin:auto"><img src="/pathfinding/recast_learning_1_rasterize_triangle/divide_poly.png" class=""></div>
+
+<p>首先遍历边 AB，其两个端点在切割线的两边。这种情况增加点 D，同时添加到 out1 和 out2 中，然后将 B 添加到 out1 中，此时 out1{DB}, out2{D}。</p>
+<p>然后遍历边 BC，其两个端点同样在切割线的两边。增加点 E，同时添加到 out1 和 out2 中，然后将 C 添加到 out2 中，此时 out1{DBE}, out2{DEC}。</p>
+<p>最后遍历 CA，因为两个端点都在切割线的右边，所以此时将 A 添加到 out2 中，得到 out1{DBE}, out2{DECA}。遍历完毕，两个多边形都切割了出来。</p>
+<h2 id="addSpan-solid-span-的添加与合并"><a href="#addSpan-solid-span-的添加与合并" class="headerlink" title="addSpan solid span 的添加与合并"></a><code>addSpan</code> solid span 的添加与合并</h2><p><code>addSpan</code> 用于将新添加的 solid span 根据其高度插入到有序链表中的合适位置，逻辑很直白。</p>
+<p>需要注意的是，如果新添加的 span 与老的 span 存在重叠，将老的 span 合并到新 span 里：</p>
+<ol>
+<li><p>如果两个 span 的顶部高度差在合并范围 <code>flagMergeThr</code> 以内，则使用两个 span 中 area 较大的值（其实就是 <code>RC_WALKABLE_AREA</code> 了）。</p>
+</li>
+<li><p>如果两个 span 的顶部高度差在合并范围 <code>flagMergeThr</code> 以外，则使用新增 span 的 area 值。</p>
+</li>
+</ol>
+<p>上述的流程结束后，Recast 就将由三角形面构成的模型转换为了由 <code>solid span</code> 构成的体素空间——高度场，并且每一个 span 上都标记了其表面是否可供行走。如果止于这一步，再依靠 <code>walkableClimb</code> 进行格子的邻接判断，那么我们就已经得到了一个基于格子的导航网格。</p>
+
+    </div>
+
+    
+    
+    
+        
+
+<div>
+<ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>Post author:  </strong>Cybroxtu
+  </li>
+  <li class="post-copyright-link">
+    <strong>Post link: </strong>
+    <a href="https://cybroxtu.github.io/pathfinding/recast_learning_1_rasterize_triangle/" title="Recast 学习记录之一：三角形光栅化、构建高度场">https://cybroxtu.github.io/pathfinding/recast_learning_1_rasterize_triangle/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>Copyright Notice:  </strong>All articles in this blog are licensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> unless stating additionally.
+  </li>
+</ul>
+</div>
+
+
+      <footer class="post-footer">
+          
+          <div class="post-tags">
+              <a href="/tags/recastnavigation/" rel="tag"><i class="fa fa-tag"></i> recastnavigation</a>
+              <a href="/tags/recast/" rel="tag"><i class="fa fa-tag"></i> recast</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/pathfinding/recast_learning_0_overall/" rel="prev" title="Recast 学习记录之零：构建流程总览">
+      <i class="fa fa-chevron-left"></i> Recast 学习记录之零：构建流程总览
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/pathfinding/recast_learning_2_filter_walkable_surface/" rel="next" title="Recast 学习记录之二：过滤可行走表面">
+      Recast 学习记录之二：过滤可行走表面 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%BA%8F"><span class="nav-number">1.</span> <span class="nav-text">序</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#HeightField-%E4%B8%8E-Solid-Span"><span class="nav-number">2.</span> <span class="nav-text">HeightField 与 Solid Span</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#rcCreateHeightfield-%E5%88%9B%E5%BB%BA%E9%AB%98%E5%BA%A6%E5%9C%BA"><span class="nav-number">3.</span> <span class="nav-text">rcCreateHeightfield 创建高度场</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#rcMarkWalkableTriangles-%E6%A0%87%E8%AE%B0%E5%8F%AF%E8%A1%8C%E8%B5%B0%E4%B8%89%E8%A7%92%E5%BD%A2"><span class="nav-number">4.</span> <span class="nav-text">rcMarkWalkableTriangles 标记可行走三角形</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#rcRasterizeTriangles-%E5%B0%86%E4%B8%89%E8%A7%92%E5%BD%A2%E8%BF%9B%E8%A1%8C%E5%85%89%E6%A0%85%E5%8C%96%E5%A4%84%E7%90%86"><span class="nav-number">5.</span> <span class="nav-text">rcRasterizeTriangles 将三角形进行光栅化处理</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#dividePoly-%E5%B0%86%E4%B8%80%E4%B8%AA%E5%87%B8%E5%A4%9A%E8%BE%B9%E5%BD%A2%EF%BC%8C%E6%8C%89%E8%BD%B4%E7%BA%BF%E5%88%87%E5%89%B2%E4%B8%BA%E4%B8%A4%E4%B8%AA%E5%87%B8%E5%A4%9A%E8%BE%B9%E5%BD%A2"><span class="nav-number">6.</span> <span class="nav-text">dividePoly 将一个凸多边形，按轴线切割为两个凸多边形</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#addSpan-solid-span-%E7%9A%84%E6%B7%BB%E5%8A%A0%E4%B8%8E%E5%90%88%E5%B9%B6"><span class="nav-number">7.</span> <span class="nav-text">addSpan solid span 的添加与合并</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Cybroxtu"
+      src="https://avatars.githubusercontent.com/u/77186652?v=4">
+  <p class="site-author-name" itemprop="name">Cybroxtu</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">8</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">1</span>
+        <span class="site-state-item-name">categories</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">tags</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/cybroxtu" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;cybroxtu" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:cybroxtu#gmail.com" title="E-Mail → mailto:cybroxtu#gmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+  <div class="cc-license motion-element" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="/images/cc-by-nc-sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Cybroxtu</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://mist.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+
+</body>
+</html>

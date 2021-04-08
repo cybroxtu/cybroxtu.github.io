@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"cybroxtu.github.io","root":"/","scheme":"Mist","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"always","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="序本文根据 Sample_SoloMesh::handleBuild 中的 Step 4. Partition walkable surface to simple regions 进行源码解析。 前面 Recast 已经将三角形面体素化为了高度场，并对可行走表面进行了进一步的筛选。这一步要做的就是将实心高度场（solid heightfield）转换到开放高度场（open heightfield">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Recast 学习记录之三：划分区域">
+<meta property="og:url" content="https://cybroxtu.github.io/pathfinding/recast_learning_3_partition_region/index.html">
+<meta property="og:site_name" content="Cybroxtu&#39;s Personal Blog">
+<meta property="og:description" content="序本文根据 Sample_SoloMesh::handleBuild 中的 Step 4. Partition walkable surface to simple regions 进行源码解析。 前面 Recast 已经将三角形面体素化为了高度场，并对可行走表面进行了进一步的筛选。这一步要做的就是将实心高度场（solid heightfield）转换到开放高度场（open heightfield">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://cybroxtu.github.io/pathfinding/recast_learning_3_partition_region/erode_with_ledge_filter.png">
+<meta property="og:image" content="https://cybroxtu.github.io/pathfinding/recast_learning_3_partition_region/erode_without_ledge_filter.png">
+<meta property="og:image" content="https://cybroxtu.github.io/pathfinding/recast_learning_3_partition_region/compact_region.png">
+<meta property="og:image" content="https://cybroxtu.github.io/pathfinding/recast_learning_3_partition_region/poly_detail_mesh.png">
+<meta property="article:published_time" content="2021-04-06T16:00:00.000Z">
+<meta property="article:modified_time" content="2021-04-08T16:54:46.210Z">
+<meta property="article:author" content="Cybroxtu">
+<meta property="article:tag" content="recastnavigation">
+<meta property="article:tag" content="recast">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://cybroxtu.github.io/pathfinding/recast_learning_3_partition_region/erode_with_ledge_filter.png">
+
+<link rel="canonical" href="https://cybroxtu.github.io/pathfinding/recast_learning_3_partition_region/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-cn'
+  };
+</script>
+
+  <title>Recast 学习记录之三：划分区域 | Cybroxtu's Personal Blog</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">Cybroxtu's Personal Blog</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-cn">
+    <link itemprop="mainEntityOfPage" href="https://cybroxtu.github.io/pathfinding/recast_learning_3_partition_region/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="https://avatars.githubusercontent.com/u/77186652?v=4">
+      <meta itemprop="name" content="Cybroxtu">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Cybroxtu's Personal Blog">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Recast 学习记录之三：划分区域
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-04-07 00:00:00" itemprop="dateCreated datePublished" datetime="2021-04-07T00:00:00+08:00">2021-04-07</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2021-04-09 00:54:46" itemprop="dateModified" datetime="2021-04-09T00:54:46+08:00">2021-04-09</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/pathfinding/" itemprop="url" rel="index"><span itemprop="name">pathfinding</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h2 id="序"><a href="#序" class="headerlink" title="序"></a>序</h2><p>本文根据 <code>Sample_SoloMesh::handleBuild</code> 中的 <code>Step 4. Partition walkable surface to simple regions</code> 进行源码解析。</p>
+<p>前面 Recast 已经将三角形面体素化为了高度场，并对可行走表面进行了进一步的筛选。这一步要做的就是将实心高度场（solid heightfield）转换到开放高度场（open heightfield），然后将可行走的体素表面经过一定处理后，划分为多个区域（region）。因时间关系，这里先只看分水岭算法，其它两种划分算法以后有时间再研究。</p>
+<p>一共有五个步骤：</p>
+<ol>
+<li><code>rcBuildCompactHeightfield</code>: 将实心高度场转换到开放高度场。</li>
+<li><code>rcErodeWalkableArea</code>: 根据 <code>walkableRadius</code> 将可行走区域边界进行一定的收缩</li>
+<li><code>rcMarkConvexPolyArea</code>: 将凸多边形区域标记为用户自定义的可行走标记</li>
+<li><code>rcBuildDistanceField</code>: 构建距离场</li>
+<li><code>rcBuildRegions</code>: 分水岭算法划分区域</li>
+</ol>
+<span id="more"></span>
+
+<p>前面的实心高度场数据结构是 <code>rcHeightField</code>，因为后续处理关心的不是实心部分，而是空心的部分，所以这里将转换为代表 open span 的高度场，Recast 称其为 <code>rcCompactHeightfield</code>，因为其中的数据经过了一定程度上的压缩处理。基本数据结构如下：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// @Recast.h</span></span><br><span class="line"></span><br><span class="line"><span class="comment">/// Provides information on the content of a cell column in a compact heightfield. </span></span><br><span class="line"><span class="comment">// 高度场内的一个格子</span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">rcCompactCell</span></span></span><br><span class="line"><span class="class">&#123;</span></span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">int</span> index : <span class="number">24</span>;        <span class="comment">// 格子内第一个 span 在 rcCompactHeightfield::spans 数组中的序号</span></span><br><span class="line">                                    <span class="comment">// 占 24 位，同一个格子内 span 的序号是递增的</span></span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">int</span> count : <span class="number">8</span>;         <span class="comment">// 格子内 span 的数量，占 8 位，也就是一个格子内最多只能有 255 个 span</span></span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="comment">/// Represents a span of unobstructed space within a compact heightfield.</span></span><br><span class="line"><span class="comment">// 代表一个 open span</span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">rcCompactSpan</span></span></span><br><span class="line"><span class="class">&#123;</span></span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">short</span> y;               <span class="comment">// span 的起始 y 坐标</span></span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">short</span> reg;             <span class="comment">// span 所属的区域 id，0 代表不在任何一个区域内</span></span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">int</span> con : <span class="number">24</span>;          <span class="comment">// 用于存储四方向 [0, 4) 的邻接关系，每个方向 6 位</span></span><br><span class="line">                                    <span class="comment">// 存连通的邻接 span 的序号相对于隔壁格子起始 span 序号的差值</span></span><br><span class="line">                                    <span class="comment">// 最大值 RC_NOT_CONNECTED (0x3F/63) 代表这个方向不连通</span></span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">int</span> h : <span class="number">8</span>;             <span class="comment">// span 在 y 轴上延伸的高度 [y, y + h)，最大为 255</span></span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="comment">/// A compact, static heightfield representing unobstructed space.</span></span><br><span class="line"><span class="comment">// 开放空间高度场</span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">rcCompactHeightfield</span></span></span><br><span class="line"><span class="class">&#123;</span></span><br><span class="line">    <span class="built_in">rcCompactHeightfield</span>();</span><br><span class="line">    ~<span class="built_in">rcCompactHeightfield</span>();</span><br><span class="line">    <span class="keyword">int</span> width;                      <span class="comment">// 高度场在 x 轴上的格子数量</span></span><br><span class="line">    <span class="keyword">int</span> height;                     <span class="comment">// 高度场在 z 轴上的格子数量</span></span><br><span class="line">    <span class="keyword">int</span> spanCount;                  <span class="comment">// 高度场内的 open span 总数</span></span><br><span class="line">    <span class="keyword">int</span> walkableHeight;             <span class="comment">//</span></span><br><span class="line">    <span class="keyword">int</span> walkableClimb;              <span class="comment">//</span></span><br><span class="line">    <span class="keyword">int</span> borderSize;                 <span class="comment">// 高度场 AABB 包围盒的边框大小</span></span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">short</span> maxDistance;     <span class="comment">// 距离场内的最大距离</span></span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">short</span> maxRegions;      <span class="comment">// 最大的 reg id 序号</span></span><br><span class="line">    <span class="keyword">float</span> bmin[<span class="number">3</span>];                  <span class="comment">// 距离场 AABB 包围盒的最小坐标</span></span><br><span class="line">    <span class="keyword">float</span> bmax[<span class="number">3</span>];                  <span class="comment">// 距离场 AABB 包围盒的最大坐标</span></span><br><span class="line">    <span class="keyword">float</span> cs;                       <span class="comment">// cellSize</span></span><br><span class="line">    <span class="keyword">float</span> ch;                       <span class="comment">// cellHeight</span></span><br><span class="line">    rcCompactCell* cells;           <span class="comment">// 格子数组</span></span><br><span class="line">    rcCompactSpan* spans;           <span class="comment">// open span 数组</span></span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">short</span>* dist;           <span class="comment">// 距离场，用于存储 span 到不可行走边界的距离</span></span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">char</span>* areas;           <span class="comment">// 存储 span 的可行走标记 area id 的数组</span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<h2 id="rcBuildCompactHeightfield"><a href="#rcBuildCompactHeightfield" class="headerlink" title="rcBuildCompactHeightfield"></a><code>rcBuildCompactHeightfield</code></h2><p>这个函数为 <code>rcCompactHeightfield</code> 分配空间，将 <code>rcHeightfield</code> 的 <code>solid span (rcSpan)</code> 转换为 <code>open span (rcCompactSpan)</code>，并且根据一个 span 与其四方向邻接 span 的底部高度差（注意现在是 open span 了，底部高度就是之前 solid span 的顶部高度）是否在 <code>walkableHeight</code> 以内来建立邻接信息。</p>
+<p>注意这里的邻接信息只保存一个邻接方向上，从低到高第一个可达的邻接 span 的序号与邻接格子第一个 span 序号的差值或者说偏移。</p>
+<p>从 <code>rcCompactSpan</code> 的 <code>unsigned int con : 24;</code> 与 <code>rcSetCon</code> 可以看到，一共 24 位，四个邻接方向，每个方向的序号偏移占 6 位。而 <code>RC_NOT_CONNECTED(63)</code> 代表该方向不可达。</p>
+<h2 id="rcErodeWalkableArea-根据-walkableRadius-将可行走区域边界进行一定的收缩"><a href="#rcErodeWalkableArea-根据-walkableRadius-将可行走区域边界进行一定的收缩" class="headerlink" title="rcErodeWalkableArea: 根据 walkableRadius 将可行走区域边界进行一定的收缩"></a><code>rcErodeWalkableArea</code>: 根据 <code>walkableRadius</code> 将可行走区域边界进行一定的收缩</h2><p>这个函数建立了一个临时的距离场数组 <code>dist</code>，首先将不可行走 span、有不连通邻居的 span 标记距离为 0。然后通过对高度场格子的由左上到右下、右下到左上的两次遍历，计算出每一个可行走 span 与不可行走 span、不连通 span 的最小距离。</p>
+<p>为什么要分两次遍历？因为第一次正向遍历时，当前格子的左、左上、上、右上四个方向的格子已经被处理过了，而左下、下、右下、右边依旧是未处理的格子，其中邻接 span 距离不能用来计算当前 span 的最小距离。所以要先从左上向右下遍历一次，这一次只根据已经处理过的左、左上、上、右上四个方向的格子来计算当前 span 的最小距离。然后再从右下到左上处理一次，这次只根据左下、下、右下、右四个方向的格子来计算当前 span 的最小距离。两次遍历确保所有格子的距离都是最小的。</p>
+<p>最后再遍历距离数组 <code>dist</code>，根据寻路实体的半径阈值 <code>radius*2</code>，判断一个 span 是否应该被标记为不可行走。注意这里乘以了 2，而前面计算最小距离的遍历对于横竖四个邻接方向的距离是加了 2，而斜向的 span 距离则是加了 3。因为横竖向格子的坐标距离其实是1，斜向应该是 $\sqrt{2}$ ，所以猜测是为了省掉浮点计算和开根计算，直接乘以 2 ，将横竖和斜向的距离按 2 和 3 （ $2 \times \sqrt{2} \approx 2.828$ ）来进行计算了，所以 <code>radius</code> 才需要乘以 2。</p>
+<p>这个步骤完成后，可以达成的效果：</p>
+<ol>
+<li>寻路实体在边墙边寻路时，不会穿模；</li>
+<li>宽度小于 <code>walkableRadius</code> 的狭小通道不允许通过；</li>
+</ol>
+<p>注意就算 <code>rcFilterLedgeSpans</code> 没开启，这个函数依旧会在悬崖边缘生成不可行走区域。</p>
+<p>如果 <code>rcFilterLedgeSpans</code> 开启了，那么该函数可能会导致悬崖边缘额外向内收缩一个格子的距离。</p>
+<p>开启 <code>rcFilterLedgeSpans</code>：</p>
+<div style="width:70%;margin:auto"><img src="/pathfinding/recast_learning_3_partition_region/erode_with_ledge_filter.png" class=""></div>
+
+<p>关闭 <code>rcFilterLedgeSpans</code>：</p>
+<div style="width:70%;margin:auto"><img src="/pathfinding/recast_learning_3_partition_region/erode_without_ledge_filter.png" class=""></div>
+
+<h2 id="rcMarkConvexPolyArea-将凸多边形区域标记为用户自定义的可行走标记"><a href="#rcMarkConvexPolyArea-将凸多边形区域标记为用户自定义的可行走标记" class="headerlink" title="rcMarkConvexPolyArea: 将凸多边形区域标记为用户自定义的可行走标记"></a><code>rcMarkConvexPolyArea</code>: 将凸多边形区域标记为用户自定义的可行走标记</h2><p>这个是将用户自定义的凸多边形区域内的可行走 span 标记为指定的 area id。</p>
+<p>函数逻辑比较简单，遍历所有 span，先判断是否在凸多边形包围盒内，然后进一步判断是否在凸多边形内，如果都为真，则将 span 标记为指定的 area id。</p>
+<p>在 Recast 中，所有的不可行走 span 的 area 都为 <code>RC_NULL_AREA(0)</code>，非 0 都代表可行走区域，默认的可行走 area id 为 <code>RC_WALKABLE_AREA(63)</code>，用户可以将一些区域自定义为其它的 id。这些 id 将会影响区域 <code>region</code> 的划分，也会影响到最终的导航网格的形状，并且用户可以通过 <code>dtQueryFilter::setAreaCost</code> 为指定 area id 设置寻路开销。</p>
+<h2 id="rcBuildDistanceField-构建距离场"><a href="#rcBuildDistanceField-构建距离场" class="headerlink" title="rcBuildDistanceField: 构建距离场"></a><code>rcBuildDistanceField</code>: 构建距离场</h2><h3 id="calculateDistanceField"><a href="#calculateDistanceField" class="headerlink" title="calculateDistanceField"></a><code>calculateDistanceField</code></h3><p>和前面 <code>rcErodeWalkableArea</code> 里建立距离场的代码大同小异，唯一的几点区别：</p>
+<ol>
+<li>距离数组的数据类型前者为 <code>unsigned char</code>，后者为 <code>unsigned short</code>；</li>
+<li>前者初始化距离数组时，对于不可行走区域都初始化为 0，而后者是走统一逻辑，判断四方向邻接 span 的 area id 是否一致。</li>
+</ol>
+<p>所以，此处建立的距离场，对于不可行走区域内部也是要计算出距离的。</p>
+<p>前者计算出的距离场，计算的是可行走 span 距离一切不可行走 span 的最小距离；</p>
+<p>后者计算出的距离场，计算的是所有 span 距离可行走与不可行走发生变化的边界处的最小距离。</p>
+<p>看起来后者是可以兼容前者的，两处计算应该可以省掉一个。</p>
+<h3 id="boxBlur"><a href="#boxBlur" class="headerlink" title="boxBlur"></a><code>boxBlur</code></h3><p>距离场构建完成后，其中的值还比较粗糙，不够平顺，不利于后面的区域划分，所以 Recast 使用 <code>boxBlur</code> 对距离场内的距离值进行一次平滑处理。</p>
+<p><code>boxBlur</code> 就是方框模糊算法，用于将一个 span 对应的距离值，修改为其九宫格范围内的平均值。</p>
+<p>入参 <code>thr</code> 是固定的 1，函数开头便将其乘以了 2。如果一个 span 的距离值小于 thr，则将其距离直接修改为 thr，不再进行均值计算。</p>
+<p>而前面 <code>calculateDistanceField</code> 得到的距离场里，边缘 span 的距离是 0，横 竖、斜向的距离增量分别是 2、3。所以最小的距离值应该是 0、2，不会有 1，这一步会将所有 0 距离的 span 都修改为 2，有什么意义呢？</p>
+<p>因为要计算 9 个 span 的距离总值，所以如果八方向里有任一方向上不连通，则直接加上当前 span 的距离值。</p>
+<p>最后的 <code>dst[i] = (unsigned short)((d+5)/9)</code> 这里 +5 是为了向上取整。</p>
+<p>我分别测试了开启和关闭 <code>boxBlur</code> 后生成的 <code>Compact Distance</code>，却并没有发现肉眼可见的区别，可能是因为试所用的 obj 文件地形简单，体现不出来平滑效果吧。</p>
+<h2 id="rcBuildRegions"><a href="#rcBuildRegions" class="headerlink" title="rcBuildRegions"></a><code>rcBuildRegions</code></h2><p>TODO 分水岭算法</p>
+<p>分水岭算法有兴趣可以看一下 <a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/67741538">图像分割的经典算法：分水岭算法</a></p>
+<p><code>rcBuildRegions</code> 这个函数稍微绕一点儿，因为用了辅助结构 <code>lvlStacks</code> 来进行遍历。</p>
+<p>现在已经有了代表 span 与边界距离的距离场数据，离边界越远距离越大，离边界越近距离越小。</p>
+<p>使用分水岭算法划分区域的时候，认为距离最大的 span 为最低点，从这些点开始进行处理。</p>
+<p>首先第一步，将高度场边界 <code>borderSize</code> 范围内可行走的 span 的 reg id 标记为头四个 reg id（从 1 开始）。对于 SoloMesh 而言，<code>borderSize</code> 是 0。</p>
+<p>函数内定义了一个水平线的变量 <code>unsigned short level = (chf.maxDistance+1) &amp; ~1;</code>，它的初始值是距离场内的最大距离。先加 1 再与 ~1 按位与，是为了向上取整到偶数，方便后面减 2 的处理。因为后面每次循环会将水平线上升 2 个单位的距离。这个 <code>level</code> 比较关键。</p>
+<p><code>sortCellsByLevel</code> 会将高度场内距离大于 level 的、未被分配 reg id 的可行走 span 加入到 <code>lvlStacks</code> 里对应的 stack 中。<code>lvlStacks</code> 一共有 <code>NB_STACKS(8)</code> 个元素，每个 stack 存储 2 个单位距离的 span，其中 stack 在 <code>lvlStacks</code> 中的序号越小，其中存储的 span 距离越大；序号越大，其中存储的 span 距离越小。但是一次最多只添加比 level 的距离小 14 个单位的 span，如果距离小到对应的 <code>sId</code> 大于 <code>lvlStacks</code> 的大小了，则直接略过，等待后续处理。而如果遇到了距离比 <code>level</code> 更大的 span，则通通加入到 <code>lvlStacks[0]</code> 中，因为这部分是之前遍历未能处理的，需要带入到当前循环里继续处理。</p>
+<p><code>while (level &gt; 0)</code> 这个循环会在 <code>lvlStacks</code> 为空时（<code>sId == 0</code>），调用 <code>sortCellsByLevel</code> 进行填充，同时每次遍历将水平线 level 上升两个单位，并且从代表距离最远的 <code>lvlStacks[0]</code> 开始进行处理，逐步往代表着距离更近的 stack 靠近。当 <code>sId != 0</code> 时，<code>appendStacks</code> 会将前一次遍历中未被处理完的元素添加到当前的 stack 中。</p>
+<p><code>while</code> 循环内的主要逻辑有两块，一个是 <code>expandRegions</code>，它会检查 stack 中所有未被分配 reg id 的 span，如果其四方向邻接 span 里存在分配过 reg id、不是 border 的 span，那么找到其中距离最小的一个，将自己的 reg id 赋为该邻接 span 的 reg id。换句话说，也就是从已分配 reg id 的外层区域，尝试向外再扩展一圈。</p>
+<p>然后是 <code>floodRegion</code>，这就是分水岭算法中的泛洪填充了。<code>rcBuildRegions</code> 会遍历 stack 中剩下的所有未被分配 reg id 的 span，依次调用 <code>floodRegion</code> 为其分配一个新的区域 id，并尝试使用 bfs 算法将这个区域进行扩展。扩展的范围由 <code>unsigned short lev = level &gt;= 2 ? level-2 : 0;</code> 和 <code>if (chf.dist[ai] &gt;= lev &amp;&amp; srcReg[ai] == 0)</code> 确定，也就是比当前水平线 level 最多小 2 个单位距离范围内的未被分配 reg id 的 span。</p>
+<p>需要注意，如果 <code>floodRegion</code> 在填充时发现一个 span 其八方向里已经有被分配了不同 reg id 的邻接 span，那么跳过对这个 span 得到 reg id 填充，等待后续处理（下次 <code>expandRegions</code> 时会将其 reg id 赋值为其四方向邻接里最近的 reg id）。</p>
+<p>当水平线 level 减到 0 后，再调用 <code>expandRegions</code> 对所有未处理的 span 的 reg id 赋值，整个分水岭算法就结束了。</p>
+<h3 id="mergeAndFilterRegions"><a href="#mergeAndFilterRegions" class="headerlink" title="mergeAndFilterRegions"></a><code>mergeAndFilterRegions</code></h3><p>下一步是调用 <code>mergeAndFilterRegions</code> 对前面生成的区域进行合并与筛选。</p>
+<p>它主要做四件事：</p>
+<ol>
+<li><p>预处理生成临时数据 <code>rcRegion</code>：</p>
+<ul>
+<li>记录每一个区域其垂直方向上重叠的所有区域 id 存储到 <code>rcRegion::floors</code>；</li>
+<li>判断一个区域内垂直方向上是否有同区域的重叠 span，记录到 <code>rcRegion::overlap</code>；</li>
+<li>通过 <code>walkContour</code> 遍历区域边界，将邻接区域的 id 按顺序存储到 <code>rcRegion::connections</code> 中，并对连续相同的 id 去重；</li>
+</ul>
+</li>
+</ol>
+<ol start="2">
+<li><p>将相连区域面积小于 <code>minRegionArea</code> 的区域进行剔除：</p>
+<p> 遍历每一个 <code>rcRegion</code>，再用 bfs 搜索其 <code>connections</code> 记录的所有邻接区域，统计相连区域的面积总和。如果其中任一区域属于 <code>borderSize</code> 留出的边界区域，则相关区域均不会被剔除。如果相连区域的面积总和小于 <code>minRegionArea</code>，则将这些区域全部删除。</p>
+<p> 之所以与边界区域相连就一定不会被剔除，应该是因为 navmesh 可能是以 tile 为单位构建的，在 tile 边界上的小区域无法得知会不会被隔壁 tile 所需要，所以就只能保留下来。</p>
+<p> 为什么是相连区域的总面积而不是单个区域的面积小于 <code>minRegionArea</code> 即剔除？猜测是为了给后面的合并留下足够的小区域，而不至于全被删掉以至少浪了很多原本可以被合并的小区域。不过有两点疑问：</p>
+<ol>
+<li>后面的区域合并必须在相同 reg id 内进行，而这里的相连面积统计并未考虑 reg id，可能导致小于 <code>minRegionArea</code> 的区域无法被剔除也无法被合并？</li>
+<li>为什么不先合并再剔除，这样不就可以安全地直接剔除掉非边界的小区域了吗？</li>
+</ol>
+</li>
+</ol>
+<ol start="3">
+<li><p>将面积小于 <code>mergeRegionSize</code> 的区域与邻接区域进行合并：</p>
+<p> 遍历所有区域，如果当前区域面积小于 <code>mergeRegionSize</code> 或者不是边界区域（与未分配区域的 span 相连），那么找到与该区域连接的所有区域中，面积最小的一个可合并区域，将自己合并到目标区域中。</p>
+<p> <code>canMergeWithRegion</code> 判断两个区域是否可以合并，需要满足条件：<br> *. reg id 必须相同；<br> *. 两个区域之间只有一段连续的边相交；<br> *. 两个区域不存在垂直方向上的重叠部分。</p>
+</li>
+</ol>
+<ol start="4">
+<li>因前面的剔除与合并操作，有效 <code>reg id</code> 不再连续，这里将其进行重排。</li>
+</ol>
+<p>我在 RecastDemo 里给一块平面上添加了一个仅有 3 个 span 大小的草地区域，<code>mergeRegionSize</code> 为 8，生成的 <code>Compact Region</code> 结果如下：</p>
+<div style="width:70%;margin:auto"><img src="/pathfinding/recast_learning_3_partition_region/compact_region.png" class=""></div>
+
+<p>生成的 <code>Poly Mesh Detail</code> 结果如下：</p>
+<div style="width:70%;margin:auto"><img src="/pathfinding/recast_learning_3_partition_region/poly_detail_mesh.png" class=""></div>
+
+<p>这个仅 3 个 span 大小的区域未被剔除。</p>
+<p>所以可以得到结论，仅孤立的、不与其它区域相连的、或者相连后的面积依旧小于 <code>minRegionArea</code> 的区域才会被删除。对于自身面积虽小、但是和邻接区域（不管 area id 是否相同）相加后面积大于 <code>minRegionArea</code> 的区域，都是需要保留的。</p>
+<p>这里黄色区域与红色区域相连，相连后的面积显然大于 <code>minRegionArea</code>，所以没有被剔除。</p>
+
+    </div>
+
+    
+    
+    
+        
+
+<div>
+<ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>Post author:  </strong>Cybroxtu
+  </li>
+  <li class="post-copyright-link">
+    <strong>Post link: </strong>
+    <a href="https://cybroxtu.github.io/pathfinding/recast_learning_3_partition_region/" title="Recast 学习记录之三：划分区域">https://cybroxtu.github.io/pathfinding/recast_learning_3_partition_region/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>Copyright Notice:  </strong>All articles in this blog are licensed under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> unless stating additionally.
+  </li>
+</ul>
+</div>
+
+
+      <footer class="post-footer">
+          
+          <div class="post-tags">
+              <a href="/tags/recastnavigation/" rel="tag"><i class="fa fa-tag"></i> recastnavigation</a>
+              <a href="/tags/recast/" rel="tag"><i class="fa fa-tag"></i> recast</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/pathfinding/recast_learning_2_filter_walkable_surface/" rel="prev" title="Recast 学习记录之二：过滤可行走表面">
+      <i class="fa fa-chevron-left"></i> Recast 学习记录之二：过滤可行走表面
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/pathfinding/recast_learning_4_trace_contour/" rel="next" title="Recast 学习记录之四：构建轮廓">
+      Recast 学习记录之四：构建轮廓 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%BA%8F"><span class="nav-number">1.</span> <span class="nav-text">序</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#rcBuildCompactHeightfield"><span class="nav-number">2.</span> <span class="nav-text">rcBuildCompactHeightfield</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#rcErodeWalkableArea-%E6%A0%B9%E6%8D%AE-walkableRadius-%E5%B0%86%E5%8F%AF%E8%A1%8C%E8%B5%B0%E5%8C%BA%E5%9F%9F%E8%BE%B9%E7%95%8C%E8%BF%9B%E8%A1%8C%E4%B8%80%E5%AE%9A%E7%9A%84%E6%94%B6%E7%BC%A9"><span class="nav-number">3.</span> <span class="nav-text">rcErodeWalkableArea: 根据 walkableRadius 将可行走区域边界进行一定的收缩</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#rcMarkConvexPolyArea-%E5%B0%86%E5%87%B8%E5%A4%9A%E8%BE%B9%E5%BD%A2%E5%8C%BA%E5%9F%9F%E6%A0%87%E8%AE%B0%E4%B8%BA%E7%94%A8%E6%88%B7%E8%87%AA%E5%AE%9A%E4%B9%89%E7%9A%84%E5%8F%AF%E8%A1%8C%E8%B5%B0%E6%A0%87%E8%AE%B0"><span class="nav-number">4.</span> <span class="nav-text">rcMarkConvexPolyArea: 将凸多边形区域标记为用户自定义的可行走标记</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#rcBuildDistanceField-%E6%9E%84%E5%BB%BA%E8%B7%9D%E7%A6%BB%E5%9C%BA"><span class="nav-number">5.</span> <span class="nav-text">rcBuildDistanceField: 构建距离场</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#calculateDistanceField"><span class="nav-number">5.1.</span> <span class="nav-text">calculateDistanceField</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#boxBlur"><span class="nav-number">5.2.</span> <span class="nav-text">boxBlur</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#rcBuildRegions"><span class="nav-number">6.</span> <span class="nav-text">rcBuildRegions</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#mergeAndFilterRegions"><span class="nav-number">6.1.</span> <span class="nav-text">mergeAndFilterRegions</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Cybroxtu"
+      src="https://avatars.githubusercontent.com/u/77186652?v=4">
+  <p class="site-author-name" itemprop="name">Cybroxtu</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">8</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">1</span>
+        <span class="site-state-item-name">categories</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">tags</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/cybroxtu" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;cybroxtu" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:cybroxtu#gmail.com" title="E-Mail → mailto:cybroxtu#gmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+  <div class="cc-license motion-element" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="/images/cc-by-nc-sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Cybroxtu</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://mist.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+
+</body>
+</html>
